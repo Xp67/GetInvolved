@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+gunicorn
+SQLAlchemy>=2
+alembic
+psycopg2-binary
+redis
+pydantic
+python-dotenv
+qrcode
+pynacl
+reportlab

@@ -1,0 +1,49 @@
+
+services:
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes: [ "./frontend:/app" ]
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    ports: [ "5173:5173" ]
+    environment: [ "VITE_API_BASE=http://localhost:8000" ]
+    depends_on: [ api ]
+
+  api:
+    build: ./backend
+    env_file: [ ./backend/.env.local ]
+    ports: [ "8000:8000" ]
+    depends_on: [ db, redis, gcs, mail ]
+    volumes: [ "./backend:/app" ]
+    command: >
+        sh -c "alembic upgrade head &&
+              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/ticketing
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ticketing
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: [ "5432:5432" ]
+    volumes: [ "dbdata:/var/lib/postgresql/data" ]
+
+  redis:
+    image: redis:7-alpine
+    ports: [ "6379:6379" ]
+
+  gcs:
+    image: fsouza/fake-gcs-server:latest
+    command: ["-scheme","http","-port","4443","-external-url","http://localhost:4443","-backend","memory"]
+    ports: [ "4443:4443" ]
+    volumes: [ "gcsdata:/data" ]
+
+  mail:
+    image: mailhog/mailhog
+    ports: [ "1025:1025", "8025:8025" ]
+
+volumes:
+  dbdata:
+  gcsdata:
