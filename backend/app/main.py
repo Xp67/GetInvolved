@@ -1,13 +1,40 @@
+"""FastAPI application bootstrap."""
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-app = FastAPI(title="GetInvolved API")
+from app.api.router import api_router
+from app.core.config import settings
+from app.schemas.health import HealthStatus
 
-@app.get("/")
-def home():
-    # reindirizza alla documentazione interattiva
-    return RedirectResponse(url="/docs")
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+def _serialize_health(status: HealthStatus) -> dict[str, bool]:
+    """Return a plain dictionary regardless of pydantic major version."""
+
+    if hasattr(status, "model_dump"):
+        return status.model_dump()
+    return status.dict()
+
+
+def create_application() -> FastAPI:
+    """Instantiate the FastAPI app with routers and metadata."""
+
+    application = FastAPI(title=settings.api_title, version=settings.api_version)
+    application.include_router(api_router, prefix=settings.api_prefix)
+
+    @application.get("/", include_in_schema=False)
+    def home() -> RedirectResponse:
+        """Redirect root traffic to the interactive documentation."""
+
+        return RedirectResponse(url="/docs")
+
+    @application.get("/health", response_model=HealthStatus, include_in_schema=False)
+    def healthcheck() -> JSONResponse:
+        """Expose legacy health endpoint without versioning."""
+
+        status = HealthStatus()
+        return JSONResponse(_serialize_health(status))
+
+    return application
+
+
+app = create_application()
