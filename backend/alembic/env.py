@@ -1,5 +1,8 @@
 from logging.config import fileConfig
 import os
+import sys
+from pathlib import Path
+
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -17,13 +20,19 @@ if config.config_file_name is not None:
 database_url = os.getenv("DATABASE_URL")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
+
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT_DIR))
+
+from app.db.base import Base  # noqa: E402  pylint: disable=wrong-import-position
     
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
