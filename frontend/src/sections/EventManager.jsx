@@ -1,7 +1,20 @@
 /** Event creation form and list within the admin dashboard. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const API_BASE_URL = (() => {
+  const explicitUrl = import.meta.env.VITE_API_BASE_URL
+  if (explicitUrl) {
+    return explicitUrl
+  }
+
+  const base = import.meta.env.VITE_API_BASE
+  if (base) {
+    const sanitizedBase = base.endsWith('/') ? base.slice(0, -1) : base
+    return `${sanitizedBase}/api`
+  }
+
+  return 'http://localhost:8000/api'
+})()
 
 const INITIAL_FORM = {
   title: '',
@@ -45,7 +58,7 @@ const formatDateTime = (value) => {
       dateStyle: 'full',
       timeStyle: 'short',
     }).format(new Date(value))
-  } catch (error) {
+  } catch {
     return value
   }
 }
