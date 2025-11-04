@@ -7,14 +7,6 @@ from app.core.config import settings
 from app.schemas.health import HealthStatus
 
 
-def _serialize_health(status: HealthStatus) -> dict[str, bool]:
-    """Return a plain dictionary regardless of pydantic major version."""
-
-    if hasattr(status, "model_dump"):
-        return status.model_dump()
-    return status.dict()
-
-
 def create_application() -> FastAPI:
     """Instantiate the FastAPI app with routers and metadata."""
 
@@ -32,7 +24,7 @@ def create_application() -> FastAPI:
         """Expose legacy health endpoint without versioning."""
 
         status = HealthStatus()
-        return JSONResponse(_serialize_health(status))
+        return JSONResponse(status.model_dump())
 
     return application
 

@@ -5,7 +5,8 @@ SQLAlchemy>=2
 alembic
 psycopg2-binary
 redis
-pydantic
+pydantic>=2,<3
+pydantic-settings>=2,<3
 python-dotenv
 qrcode
 pynacl

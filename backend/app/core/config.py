@@ -1,7 +1,8 @@
 """Application settings management."""
 from functools import lru_cache
 
-from pydantic import BaseSettings, Field, PostgresDsn, validator
+from pydantic import Field, PostgresDsn, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -16,14 +17,14 @@ class Settings(BaseSettings):
         description="SQLAlchemy connection string",
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    # Pydantic v2 settings configuration
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False
+    )
 
-    @validator("database_url", pre=True)
+    @field_validator("database_url", mode="before")
     def assemble_db_connection(cls, value: str | None) -> str:
-        """Allow DATABASE_URL env var overriding the DSN."""
+        """Ensure `DATABASE_URL` is provided as a string."""
         if isinstance(value, str):
             return value
         raise ValueError("DATABASE_URL must be provided as a string")

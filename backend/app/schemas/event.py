@@ -4,20 +4,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict
 
-try:  # pragma: no cover - compatibility with pydantic v1
-    from pydantic import BaseModel, ConfigDict, Field, HttpUrl
-except ImportError:  # pragma: no cover
-    from pydantic import BaseModel, Field, HttpUrl  # type: ignore
-
-    ConfigDict = None  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 def _model_dump(model: BaseModel) -> Dict[str, Any]:
-    """Return plain data regardless of installed Pydantic version."""
-
-    if hasattr(model, "model_dump"):
-        return model.model_dump()
-    return model.dict()  # type: ignore[return-value]
+    """Return plain data using Pydantic v2 API."""
+    return model.model_dump()
 
 
 class EventBase(BaseModel):
@@ -46,11 +38,7 @@ class EventRead(EventBase):
     created_at: datetime
     updated_at: datetime
 
-    if "ConfigDict" in globals() and ConfigDict is not None:  # pragma: no branch
-        model_config = ConfigDict(from_attributes=True)
-    else:  # pragma: no cover - only executed on pydantic v1
-        class Config:  # type: ignore[no-redef]
-            orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 __all__ = [
