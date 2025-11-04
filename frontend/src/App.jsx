@@ -1,34 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
+import AdminDashboard from './pages/AdminDashboard.jsx'
+import HomePage from './pages/HomePage.jsx'
+
+const HOME_ROUTE = 'home'
+const ADMIN_ROUTE = 'admin'
+
+const normalizeHash = () => {
+  const rawHash = window.location.hash.replace('#', '') || '/'
+  if (rawHash.startsWith('/admin')) {
+    return ADMIN_ROUTE
+  }
+  return HOME_ROUTE
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [currentRoute, setCurrentRoute] = useState(() => normalizeHash())
+
+  const navigate = useCallback((hash) => {
+    if (window.location.hash !== hash) {
+      window.location.hash = hash
+    }
+    setCurrentRoute(normalizeHash())
+  }, [])
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentRoute(normalizeHash())
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const routeElement = useMemo(() => {
+    if (currentRoute === ADMIN_ROUTE) {
+      return <AdminDashboard onNavigateHome={() => navigate('#/')} />
+    }
+
+    return <HomePage onNavigateToAdmin={() => navigate('#/admin')} />
+  }, [currentRoute, navigate])
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app-container">
+      {routeElement}
+    </div>
   )
 }
 
