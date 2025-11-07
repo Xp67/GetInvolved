@@ -9,6 +9,9 @@
       }
     ],
     "@babel/preset-react"
+    
   ],
+  "sourceType": "module",
+
   "plugins": ["@babel/plugin-proposal-class-properties"]
 }
