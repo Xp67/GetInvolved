@@ -21,7 +21,7 @@ class Event(models.Model):
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    code = models.CharField(max_length=10, unique=True)
+    code = models.CharField(max_length=10, default=generate_unique_code, unique=True)
 
 
     def __str__(self):
