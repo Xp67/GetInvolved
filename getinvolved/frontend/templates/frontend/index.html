@@ -1,4 +1,4 @@
- {% load static %}
+{% load static %}
  <!DOCTYPE html>
 <html>
     <head>
@@ -11,12 +11,16 @@
     <link rel="stylesheet" type="text/css"  href="{% static 'css/index.css' %}" />
 
     </head>
+
+ {% block content %}
     <body>
         <div id="main">
             <div id="app"></div>
         </div>
 
+        
         <script src="{% static 'frontend/main.js' %}"> </script>
-
     </body>
+ {% endblock content %}
+ 
 </html>

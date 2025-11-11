@@ -3,6 +3,7 @@ import React, { Component } from "react";
 import HomePage from "./HomePage";
 import EventCreationPage from "./EventCreationPage";
 import EventsPage from "./EventsPage";
+import PublicLayout from "../layout/layout";
 import { BrowserRouter as Router, Routes, Route, Link, Redirect } from "react-router-dom";
 
 export default class App extends Component {
@@ -15,7 +16,7 @@ export default class App extends Component {
     return (
       <div>
          <Router>
-            <Routes>
+            <Routes element={<PublicLayout />}>
                 <Route  path='/' Component={HomePage}/>
                 <Route  path='/create-event' Component={EventCreationPage}/>
                 <Route  path='/events' Component={EventsPage}/>
