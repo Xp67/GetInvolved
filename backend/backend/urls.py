@@ -21,12 +21,15 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from api.views import CreateUserView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.http import HttpResponse
 
-
+def health(request):
+    return HttpResponse("Backend GetInvolved è UP", content_type="text/plain")
 
 
 urlpatterns = [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    path("", health, name="health"),
     path('admin/', admin.site.urls),
     path('api/user/register/', CreateUserView.as_view(), name='register'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
