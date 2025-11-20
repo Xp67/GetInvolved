@@ -24,7 +24,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.http import HttpResponse
 
 def health(request):
-    return HttpResponse("Backend GetInvolved è UP", content_type="text/plain")
+    return HttpResponse("Yes, we are up and partying!, Cafa culo", content_type="text/plain")
 
 
 urlpatterns = [
