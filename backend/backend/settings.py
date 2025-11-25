@@ -101,16 +101,37 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+
+# Support Cloud SQL unix socket connections when CLOUD_SQL_CONNECTION_NAME is provided.
+cloud_sql_connection = os.getenv("CLOUD_SQL_CONNECTION_NAME")
+db_socket_dir = os.getenv("DB_SOCKET_DIR", "/cloudsql")
+
+if DB_NAME:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": os.path.join(db_socket_dir, cloud_sql_connection)
+            if cloud_sql_connection
+            else DB_HOST,
+            "PORT": DB_PORT,
+        }
     }
-}
+else:
+    # Provide a local SQLite fallback when database env vars are not configured.
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
