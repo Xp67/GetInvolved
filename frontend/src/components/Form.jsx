@@ -7,6 +7,7 @@ import LoadingIndicator from "./LoadingIndicator";
 
 function Form({route, method}) {
     const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -20,6 +21,7 @@ function Form({route, method}) {
         try{
             const res = await api.post(route,{
                 username,
+                email,
                 password
             })
             if(method === "login"){
@@ -54,6 +56,13 @@ function Form({route, method}) {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+            className="form-input"
+            type="text"
+            placeholder="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
         />
          <input
             className="form-input"
