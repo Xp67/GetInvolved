@@ -10,21 +10,26 @@ function Form({route, method}) {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    
+
     const name = method === "login" ? "Login" : "Register";
-    
+
     const handleSubmit = async (e) => {
         setLoading(true);
         e.preventDefault();
 
-        try{ 
+        try{
             const res = await api.post(route,{
                 username,
                 password
             })
             if(method === "login"){
-                localStorage.setItem(ACCESS_TOKEN, res.data.access)
-                localStorage.setItem(REFRESH_TOKEN, res.data.refresh)
+                const access = res?.data?.access;
+                const refresh = res?.data?.refresh;
+                if (!access || !refresh) {
+                    throw new Error("Authentication response is missing access or refresh tokens.");
+                }
+                localStorage.setItem(ACCESS_TOKEN, access)
+                localStorage.setItem(REFRESH_TOKEN, refresh)
 
                 navigate("/")
                 }
