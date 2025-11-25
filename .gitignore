@@ -1,1 +1,5 @@
-env
+# Project environment directories and files
+env/
+.env
+.env.*
+*.env

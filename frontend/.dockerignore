@@ -6,3 +6,7 @@ Dockerfile
 dist
 .vscode
 .idea
+.env
+.env.*
+*.env
+env
