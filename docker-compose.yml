@@ -17,4 +17,24 @@ services:
       context: ./backend
     ports:
       - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - db
     restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: getinvolved-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_HOST: ${DB_HOST}
+      POSTGRES_PORT: ${DB_PORT}
+    volumes:
+      - getinvolved_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  getinvolved_db:
