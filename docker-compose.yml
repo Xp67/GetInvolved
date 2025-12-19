@@ -26,12 +26,8 @@ services:
   db:
     image: postgres:16-alpine
     container_name: getinvolved-db
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_HOST: ${DB_HOST}
-      POSTGRES_PORT: ${DB_PORT}
+    env_file:
+      - .env
     volumes:
       - getinvolved_db:/var/lib/postgresql/data
     restart: unless-stopped
