@@ -6,47 +6,39 @@ import {
   Button,
   Box,
   IconButton,
-  Menu,
-  MenuItem,
-  Container
+  Container,
+  Avatar
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { ACCESS_TOKEN } from '../constants';
+import api from '../api';
 
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     // Check if token exists
     const token = localStorage.getItem(ACCESS_TOKEN);
     setIsLoggedIn(!!token);
+    if (token) {
+      fetchUsername();
+    }
   }, [location]);
 
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    handleClose();
-    navigate('/logout');
-  };
-
-  const handleProfile = () => {
-    handleClose();
-    navigate('/profile');
-  };
-
-  const handleDashboard = () => {
-    handleClose();
-    navigate('/dashboard');
+  const fetchUsername = async () => {
+    try {
+      const res = await api.get("/api/user/profile/");
+      setUsername(res.data.username);
+    } catch (error) {
+      console.error("Error fetching username", error);
+      // If unauthorized, the interceptor should handle it,
+      // but here we just ensure we don't show a broken username
+    }
   };
 
   return (
@@ -68,42 +60,31 @@ function Navbar() {
             {!isLoggedIn ? (
               <>
                 <Button color="inherit" onClick={() => navigate('/login')}>Accedi</Button>
-                <Button variant="contained" color="primary" sx={{ ml: 2 }} onClick={() => navigate('/register')}>
-                  Registrati
-                </Button>
               </>
             ) : (
               <>
                 <Button color="inherit" onClick={() => navigate('/dashboard')}>Dashboard</Button>
-                <IconButton
-                  size="large"
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
+
+                <Button
+                  onClick={() => navigate('/profile')}
                   color="inherit"
+                  sx={{ textTransform: 'none', display: 'flex', alignItems: 'center', ml: 2, px: 1 }}
                 >
-                  <AccountCircle />
+                  <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main', fontSize: '1rem' }}>
+                    {username ? username[0].toUpperCase() : <AccountCircle />}
+                  </Avatar>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    {username}
+                  </Typography>
+                </Button>
+
+                <IconButton
+                  onClick={() => navigate('/logout')}
+                  sx={{ color: 'error.main', ml: 1 }}
+                  aria-label="logout"
+                >
+                  <LogoutIcon />
                 </IconButton>
-                <Menu
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  open={Boolean(anchorEl)}
-                  onClose={handleClose}
-                >
-                  <MenuItem onClick={handleProfile}>Profilo</MenuItem>
-                  <MenuItem onClick={handleDashboard}>Dashboard</MenuItem>
-                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                </Menu>
               </>
             )}
           </Box>

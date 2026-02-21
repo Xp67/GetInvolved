@@ -117,8 +117,14 @@ function Form({ route, method }) {
                         fullWidth
                         variant="text"
                         onClick={() => navigate(method === "login" ? "/register" : "/login")}
+                        sx={{
+                            textTransform: 'none',
+                            fontSize: method === "login" ? '0.8rem' : 'inherit',
+                            color: 'text.secondary',
+                            mt: 1
+                        }}
                     >
-                        {method === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+                        {method === "login" ? "oppure registrati subito" : "Hai già un account? Accedi"}
                     </Button>
                 </Box>
             </Paper>
