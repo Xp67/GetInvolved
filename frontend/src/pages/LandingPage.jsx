@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -13,9 +13,16 @@ import { useNavigate } from 'react-router-dom';
 import EventIcon from '@mui/icons-material/Event';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import TaskIcon from '@mui/icons-material/Task';
+import { ACCESS_TOKEN } from '../constants';
 
 function LandingPage() {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    setIsLoggedIn(!!token);
+  }, []);
 
   const services = [
     {
@@ -56,23 +63,37 @@ function LandingPage() {
             La piattaforma all-in-one per i tuoi eventi e la gestione dei tuoi progetti.
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              onClick={() => navigate('/register')}
-              sx={{ fontWeight: 'bold' }}
-            >
-              Inizia Ora
-            </Button>
-            <Button
-              variant="outlined"
-              color="inherit"
-              size="large"
-              onClick={() => navigate('/login')}
-            >
-              Accedi
-            </Button>
+            {!isLoggedIn ? (
+              <>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  onClick={() => navigate('/register')}
+                  sx={{ fontWeight: 'bold' }}
+                >
+                  Inizia Ora
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="large"
+                  onClick={() => navigate('/login')}
+                >
+                  Accedi
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                color="secondary"
+                size="large"
+                onClick={() => navigate('/dashboard')}
+                sx={{ fontWeight: 'bold' }}
+              >
+                Vai alla Dashboard
+              </Button>
+            )}
           </Stack>
         </Container>
       </Box>
