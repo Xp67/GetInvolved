@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-ENV PORT=8000
-EXPOSE 8000
+ENV PORT=8080
+EXPOSE 8080
 
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8080"]

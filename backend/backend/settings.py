@@ -125,7 +125,7 @@ if DB_NAME:
 else:
 
     # Provide a local SQLite fallback when database env vars are not configured.
-    DATABASES = {
+        DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",

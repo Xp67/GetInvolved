@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  frontend:
+    container_name: getinvolved-frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: https://api.getinvolvd.com
+    ports:
+      - "127.0.0.1:3000:80"
+    restart: unless-stopped
+
+  backend:
+    container_name: getinvolved-backend
+    build:
+      context: ./backend
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: getinvolved-db
+    env_file:
+      - .env
+    volumes:
+      - getinvolved_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  getinvolved_db:
