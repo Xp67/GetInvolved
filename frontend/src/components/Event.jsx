@@ -1,21 +1,64 @@
 import React from "react";
-import "../styles/Event.css";
-
+import {
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Box,
+  Stack,
+  Divider
+} from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 function Event({ event, onDelete }) {
-    const formattedDate = new Date(event.created_at).toLocaleDateString("it-IT");
+    const formattedDate = event.created_at
+        ? new Date(event.created_at).toLocaleDateString("it-IT", {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          })
+        : "Data non disponibile";
 
     return (
-        <div className="event-container">
-        <h3 className="event-title">{event.title}</h3>
-        <p className="event-content">{event.description}</p>
-        <p className="event-content">{event.location}</p>
-        <p className="event-content">{formattedDate}</p>
-        <button className="delete-button" onClick={() => onDelete(Event.id)}>
-            Delete
-        </button>
-    </div>
-);
+        <Card sx={{ mb: 2, boxShadow: 1, '&:hover': { boxShadow: 3 } }}>
+            <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Box>
+                        <Typography variant="h6" component="div" fontWeight="bold" color="primary">
+                            {event.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
+                            {event.description}
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => onDelete(event.id)}
+                    >
+                        Elimina
+                    </Button>
+                </Stack>
+
+                <Divider sx={{ my: 1.5 }} />
+
+                <Stack direction="row" spacing={3} color="text.secondary">
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <LocationOnIcon fontSize="small" />
+                        <Typography variant="caption">{event.location}</Typography>
+                    </Stack>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <CalendarTodayIcon fontSize="small" />
+                        <Typography variant="caption">{formattedDate}</Typography>
+                    </Stack>
+                </Stack>
+            </CardContent>
+        </Card>
+    );
 }
 
 export default Event;
