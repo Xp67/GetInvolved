@@ -2,81 +2,128 @@ import { useState } from "react";
 import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { REFRESH_TOKEN, ACCESS_TOKEN } from "../constants";
-import "../styles/Form.css"
-import LoadingIndicator from "./LoadingIndicator";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Container,
+  Paper,
+  CircularProgress,
+  Alert
+} from "@mui/material";
 
-function Form({route, method}) {
+function Form({ route, method }) {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
     const navigate = useNavigate();
 
-    const name = method === "login" ? "Login" : "Register";
+    const name = method === "login" ? "Accedi" : "Registrati";
 
     const handleSubmit = async (e) => {
         setLoading(true);
+        setError("");
         e.preventDefault();
 
-        try{
-            const res = await api.post(route,{
-                username,
-                email,
-                password
-            })
-            if(method === "login"){
+        try {
+            // For login, we use email as the identifier
+            const data = method === "login"
+                ? { email, password }
+                : { username, email, password };
+
+            const res = await api.post(route, data);
+
+            if (method === "login") {
                 const access = res?.data?.access;
                 const refresh = res?.data?.refresh;
                 if (!access || !refresh) {
-                    throw new Error("Authentication response is missing access or refresh tokens.");
+                    throw new Error("Risposta del server non valida.");
                 }
-                localStorage.setItem(ACCESS_TOKEN, access)
-                localStorage.setItem(REFRESH_TOKEN, refresh)
-
-                navigate("/")
-                }
-
-            else{
-                navigate("/login")
+                localStorage.setItem(ACCESS_TOKEN, access);
+                localStorage.setItem(REFRESH_TOKEN, refresh);
+                navigate("/dashboard");
+            } else {
+                navigate("/login");
             }
-            
-        }
-        catch(error){
-            alert(error)
-        }
-        finally{
+        } catch (error) {
+            console.error(error);
+            setError(error.response?.data?.detail || "Si è verificato un errore. Riprova.");
+        } finally {
             setLoading(false);
         }
-    }
-    return <form onSubmit={handleSubmit} className="form-container">
-        <h1>{name}</h1>
-        <input
-            className="form-input"
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-            className="form-input"
-            type="text"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-        />
-         <input
-            className="form-input"
-            type="password"
-            placeholder="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-        />
-        {loading && <LoadingIndicator/>}
-        <button className="form-button" type="submit">
-            {name}
-        </button>
-    </form>
-        
+    };
+
+    return (
+        <Container maxWidth="xs" sx={{ mt: 8 }}>
+            <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Typography component="h1" variant="h5" fontWeight="bold">
+                    {name}
+                </Typography>
+
+                {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
+
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
+                    {method === "register" && (
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="username"
+                            label="Username"
+                            name="username"
+                            autoComplete="username"
+                            autoFocus
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                        />
+                    )}
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="email"
+                        label="Indirizzo Email"
+                        name="email"
+                        autoComplete="email"
+                        autoFocus={method === "login"}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        name="password"
+                        label="Password"
+                        type="password"
+                        id="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2, height: 45 }}
+                        disabled={loading}
+                    >
+                        {loading ? <CircularProgress size={24} /> : name}
+                    </Button>
+                    <Button
+                        fullWidth
+                        variant="text"
+                        onClick={() => navigate(method === "login" ? "/register" : "/login")}
+                    >
+                        {method === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+                    </Button>
+                </Box>
+            </Paper>
+        </Container>
+    );
 }
 
 export default Form;

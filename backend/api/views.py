@@ -1,7 +1,9 @@
 from django.shortcuts import render
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework import generics
 from .serializer import UserSerializer, EventSerializer
+
+User = get_user_model()
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Event
 
@@ -35,3 +37,10 @@ class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
