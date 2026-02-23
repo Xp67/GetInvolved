@@ -39,18 +39,23 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+        super().save(*args, **kwargs)
+
     @property
-    def is_marco(self):
-        return self.email == 'Marco.def4lt@gmail.com'
+    def is_super_admin(self):
+        return self.roles.filter(name='Super Admin').exists()
 
     def get_all_permissions(self):
-        if self.is_marco:
+        if self.is_super_admin:
             return AppPermission.objects.values_list('codename', flat=True)
 
         return AppPermission.objects.filter(roles__users=self).values_list('codename', flat=True).distinct()
 
     def has_app_permission(self, codename):
-        if self.is_marco:
+        if self.is_super_admin:
             return True
         return self.roles.filter(permissions__codename=codename).exists()
 
@@ -60,12 +65,6 @@ def assign_base_role(sender, instance, created, **kwargs):
         base_role = Role.objects.filter(name='Base').first()
         if base_role:
             instance.roles.add(base_role)
-
-        # If it's Marco, also add Super Admin
-        if instance.email == 'Marco.def4lt@gmail.com':
-            super_admin_role = Role.objects.filter(name='Super Admin').first()
-            if super_admin_role:
-                instance.roles.add(super_admin_role)
 
 class Event(models.Model):
     title = models.CharField(max_length=100)

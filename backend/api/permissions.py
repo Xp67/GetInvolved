@@ -9,7 +9,7 @@ class HasAppPermission(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        if request.user.email == 'Marco.def4lt@gmail.com':
+        if request.user.is_super_admin:
             return True
 
         required_perm = getattr(view, 'required_permission', None)
@@ -23,7 +23,7 @@ class EventPermission(BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
-        if user.email == 'Marco.def4lt@gmail.com':
+        if user.is_super_admin:
             return True
 
         if request.method == 'GET':
@@ -34,7 +34,7 @@ class EventPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if user.email == 'Marco.def4lt@gmail.com':
+        if user.is_super_admin:
             return True
 
         is_owner = obj.organizer == user
