@@ -29,7 +29,13 @@ class EventDelete(generics.DestroyAPIView):
 
     def get_queryset(self):
         return Event.objects.filter(organizer=self.request.user)
-    
+
+class EventUpdate(generics.UpdateAPIView):
+    serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Event.objects.filter(organizer=self.request.user)
 
 
 
