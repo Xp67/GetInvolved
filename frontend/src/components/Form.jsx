@@ -124,7 +124,7 @@ function Form({ route, method }) {
                             mt: 1
                         }}
                     >
-                        {method === "login" ? "oppure registrati subito" : "Hai già un account? Accedi"}
+                        {method === "login" ? "Non hai un account? Registrati ora!" : "Hai già un account? Accedi"}
                     </Button>
                 </Box>
             </Paper>

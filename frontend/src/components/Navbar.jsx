@@ -59,7 +59,7 @@ function Navbar() {
 
             {!isLoggedIn ? (
               <>
-                <Button color="inherit" onClick={() => navigate('/login')}>Accedi</Button>
+                <Button color="inherit" onClick={() => navigate('/login')} sx={{ textTransform: 'none' }}>Inizia ora</Button>
               </>
             ) : (
               <>

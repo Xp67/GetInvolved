@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -10,12 +10,19 @@ import {
   Stack
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { ACCESS_TOKEN } from '../constants';
 import EventIcon from '@mui/icons-material/Event';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import TaskIcon from '@mui/icons-material/Task';
 
 function LandingPage() {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    setIsLoggedIn(!!token);
+  }, []);
 
   const services = [
     {
@@ -60,18 +67,10 @@ function LandingPage() {
               variant="contained"
               color="secondary"
               size="large"
-              onClick={() => navigate('/register')}
-              sx={{ fontWeight: 'bold' }}
+              onClick={() => isLoggedIn ? navigate('/dashboard') : navigate('/login')}
+              sx={{ fontWeight: 'bold', textTransform: 'none' }}
             >
-              Inizia Ora
-            </Button>
-            <Button
-              variant="outlined"
-              color="inherit"
-              size="large"
-              onClick={() => navigate('/login')}
-            >
-              Accedi
+              Inizia ora
             </Button>
           </Stack>
         </Container>
