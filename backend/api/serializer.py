@@ -54,6 +54,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         role_ids = validated_data.pop('roles', [])
+
+        # Security check for Super Admin role
+        super_admin = Role.objects.filter(name='Super Admin').first()
+        request = self.context.get('request')
+        request_user = request.user if request else None
+
+        if super_admin and super_admin in role_ids:
+            if not request_user or not getattr(request_user, 'is_super_admin', False):
+                role_ids = [r for r in role_ids if r != super_admin]
+
         user = User.objects.create_user(**validated_data)
         if role_ids:
             user.roles.set(role_ids)
@@ -62,10 +72,22 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         role_ids = validated_data.pop('roles', None)
         if role_ids is not None:
-            # Prevent assigning Super Admin to anyone but Marco
+            # Prevent assigning or removing Super Admin if the requester is not a Super Admin
             super_admin = Role.objects.filter(name='Super Admin').first()
-            if super_admin in role_ids and instance.email != 'Marco.def4lt@gmail.com':
-                role_ids = [r for r in role_ids if r != super_admin]
+            request = self.context.get('request')
+            request_user = request.user if request else None
+
+            if super_admin and (not request_user or not getattr(request_user, 'is_super_admin', False)):
+                is_currently_super_admin = instance.roles.filter(id=super_admin.id).exists()
+                will_be_super_admin = super_admin in role_ids
+
+                if will_be_super_admin and not is_currently_super_admin:
+                    # Cannot assign Super Admin if not Super Admin
+                    role_ids = [r for r in role_ids if r != super_admin]
+                elif is_currently_super_admin and not will_be_super_admin:
+                    # Cannot remove Super Admin if not Super Admin
+                    role_ids.append(super_admin)
+
             instance.roles.set(role_ids)
 
         # Handle password update if provided
