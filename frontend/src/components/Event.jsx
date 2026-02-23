@@ -9,10 +9,11 @@ import {
   Divider
 } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
-function Event({ event, onDelete }) {
+function Event({ event, onDelete, onEdit, canDelete = true, canEdit = true }) {
     const formattedDate = event.created_at
         ? new Date(event.created_at).toLocaleDateString("it-IT", {
             day: 'numeric',
@@ -33,15 +34,30 @@ function Event({ event, onDelete }) {
                             {event.description}
                         </Typography>
                     </Box>
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => onDelete(event.id)}
-                    >
-                        Elimina
-                    </Button>
+                    <Stack direction="row" spacing={1}>
+                        {canEdit && (
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                size="small"
+                                startIcon={<EditIcon />}
+                                onClick={() => onEdit()}
+                            >
+                                Modifica
+                            </Button>
+                        )}
+                        {canDelete && (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<DeleteIcon />}
+                                onClick={() => onDelete(event.id)}
+                            >
+                                Elimina
+                            </Button>
+                        )}
+                    </Stack>
                 </Stack>
 
                 <Divider sx={{ my: 1.5 }} />
