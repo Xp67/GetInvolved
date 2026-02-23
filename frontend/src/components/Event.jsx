@@ -37,11 +37,17 @@ function Event({ event, onDelete, onEdit, canDelete = true, canEdit = true }) {
                     <Stack direction="row" spacing={1}>
                         {canEdit && (
                             <Button
-                                variant="outlined"
-                                color="primary"
+                                variant="contained"
                                 size="small"
                                 startIcon={<EditIcon />}
-                                onClick={() => onEdit()}
+                                onClick={() => onEdit(event)}
+                                sx={{
+                                    backgroundColor: '#ffb74d',
+                                    '&:hover': {
+                                        backgroundColor: '#ffa726',
+                                    },
+                                    textTransform: 'none'
+                                }}
                             >
                                 Modifica
                             </Button>

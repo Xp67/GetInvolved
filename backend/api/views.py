@@ -41,8 +41,18 @@ class EventDelete(generics.DestroyAPIView):
         if user.has_app_permission('events.delete_own'):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
-    
 
+class EventUpdate(generics.UpdateAPIView):
+    serializer_class = EventSerializer
+    permission_classes = [EventPermission]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.email == 'Marco.def4lt@gmail.com' or user.has_app_permission('events.edit_all'):
+            return Event.objects.all()
+        if user.has_app_permission('events.edit_own'):
+            return Event.objects.filter(organizer=user)
+        return Event.objects.none()
 
 
 class CreateUserView(generics.CreateAPIView):
