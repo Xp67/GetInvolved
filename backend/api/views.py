@@ -24,7 +24,7 @@ class EventListCreate(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.email == 'Marco.def4lt@gmail.com' or user.has_app_permission('events.view_all'):
+        if user.is_marco or user.has_app_permission('events.view_all'):
             return Event.objects.all()
         if user.has_app_permission('events.view_own'):
             return Event.objects.filter(organizer=user)
@@ -36,7 +36,7 @@ class EventDelete(generics.DestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.email == 'Marco.def4lt@gmail.com' or user.has_app_permission('events.delete_all'):
+        if user.is_marco or user.has_app_permission('events.delete_all'):
             return Event.objects.all()
         if user.has_app_permission('events.delete_own'):
             return Event.objects.filter(organizer=user)
@@ -48,7 +48,7 @@ class EventUpdate(generics.UpdateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.email == 'Marco.def4lt@gmail.com' or user.has_app_permission('events.edit_all'):
+        if user.is_marco or user.has_app_permission('events.edit_all'):
             return Event.objects.all()
         if user.has_app_permission('events.edit_own'):
             return Event.objects.filter(organizer=user)

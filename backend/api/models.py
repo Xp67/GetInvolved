@@ -41,7 +41,7 @@ class User(AbstractUser):
 
     @property
     def is_marco(self):
-        return self.email == 'Marco.def4lt@gmail.com'
+        return self.email.lower() == 'marco.def4lt@gmail.com'
 
     def get_all_permissions(self):
         if self.is_marco:
@@ -62,7 +62,7 @@ def assign_base_role(sender, instance, created, **kwargs):
             instance.roles.add(base_role)
 
         # If it's Marco, also add Super Admin
-        if instance.email == 'Marco.def4lt@gmail.com':
+        if instance.email.lower() == 'marco.def4lt@gmail.com':
             super_admin_role = Role.objects.filter(name='Super Admin').first()
             if super_admin_role:
                 instance.roles.add(super_admin_role)

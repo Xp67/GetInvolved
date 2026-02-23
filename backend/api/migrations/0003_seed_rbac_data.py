@@ -55,7 +55,7 @@ def seed_rbac(apps, schema_editor):
     base_role.permissions.set(base_permissions)
 
     # 4. Link Marco if exists
-    marco = User.objects.filter(email='Marco.def4lt@gmail.com').first()
+    marco = User.objects.filter(email__iexact='marco.def4lt@gmail.com').first()
     if marco:
         marco.roles.add(super_admin)
 

@@ -128,7 +128,7 @@ function Dashboard() {
 
   const updateEvent = () => {
     api
-      .patch(`/api/event/${editingEvent.id}/`, { title, description, location })
+      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location })
       .then((res) => {
         if (res.status === 200) {
             handleClose();

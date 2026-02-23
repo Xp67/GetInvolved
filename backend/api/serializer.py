@@ -64,7 +64,7 @@ class UserSerializer(serializers.ModelSerializer):
         if role_ids is not None:
             # Prevent assigning Super Admin to anyone but Marco
             super_admin = Role.objects.filter(name='Super Admin').first()
-            if super_admin in role_ids and instance.email != 'Marco.def4lt@gmail.com':
+            if super_admin in role_ids and not instance.is_marco:
                 role_ids = [r for r in role_ids if r != super_admin]
             instance.roles.set(role_ids)
 
