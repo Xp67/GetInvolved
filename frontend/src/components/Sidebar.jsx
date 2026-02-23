@@ -1,0 +1,78 @@
+import React from 'react';
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Paper
+} from '@mui/material';
+import EventIcon from '@mui/icons-material/Event';
+import PeopleIcon from '@mui/icons-material/People';
+import SecurityIcon from '@mui/icons-material/Security';
+
+function Sidebar({ currentSection, onSectionChange, userPermissions = [] }) {
+  const hasPermission = (perm) => {
+    return userPermissions.includes(perm);
+  };
+
+  const menuItems = [
+    {
+      id: 'eventi',
+      label: 'Eventi',
+      icon: <EventIcon />,
+      show: hasPermission('events.view_own') || hasPermission('events.view_all')
+    },
+    {
+      id: 'utenti',
+      label: 'Utenti',
+      icon: <PeopleIcon />,
+      show: hasPermission('users.view')
+    },
+    {
+      id: 'ruoli',
+      label: 'Ruoli e permessi',
+      icon: <SecurityIcon />,
+      show: hasPermission('roles.view')
+    },
+  ];
+
+  return (
+    <Paper sx={{ width: 240, height: 'calc(100vh - 100px)', position: 'sticky', top: 20, borderRadius: 2 }} elevation={0} variant="outlined">
+      <Box sx={{ p: 2 }}>
+        <List>
+          {menuItems.filter(item => item.show).map((item) => (
+            <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
+              <ListItemButton
+                selected={currentSection === item.id}
+                onClick={() => onSectionChange(item.id)}
+                sx={{
+                  borderRadius: 1,
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.light',
+                    color: 'primary.main',
+                    '& .MuiListItemIcon-root': {
+                      color: 'primary.main',
+                    },
+                    '&:hover': {
+                      bgcolor: 'primary.light',
+                    }
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: currentSection === item.id ? 'bold' : 'medium' }} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    </Paper>
+  );
+}
+
+export default Sidebar;

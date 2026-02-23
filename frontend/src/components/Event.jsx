@@ -13,7 +13,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
-function Event({ event, onDelete, onEdit }) {
+
+function Event({ event, onDelete, onEdit, canDelete = true, canEdit = true }) {
     const formattedDate = event.created_at
         ? new Date(event.created_at).toLocaleDateString("it-IT", {
             day: 'numeric',
@@ -34,31 +35,35 @@ function Event({ event, onDelete, onEdit }) {
                             {event.description}
                         </Typography>
                     </Box>
-                    <Stack spacing={1}>
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            startIcon={<DeleteIcon />}
-                            onClick={() => onDelete(event.id)}
-                        >
-                            Elimina
-                        </Button>
-                        <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<EditIcon />}
-                            onClick={() => onEdit(event)}
-                            sx={{
-                                backgroundColor: '#ffb74d',
-                                '&:hover': {
-                                    backgroundColor: '#ffa726',
-                                },
-                                textTransform: 'none'
-                            }}
-                        >
-                            Modifica
-                        </Button>
+                    <Stack direction="row" spacing={1}>
+                        {canEdit && (
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<EditIcon />}
+                                onClick={() => onEdit(event)}
+                                sx={{
+                                    backgroundColor: '#ffb74d',
+                                    '&:hover': {
+                                        backgroundColor: '#ffa726',
+                                    },
+                                    textTransform: 'none'
+                                }}
+                            >
+                                Modifica
+                            </Button>
+                        )}
+                        {canDelete && (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<DeleteIcon />}
+                                onClick={() => onDelete(event.id)}
+                            >
+                                Elimina
+                            </Button>
+                        )}
                     </Stack>
                 </Stack>
 
