@@ -13,7 +13,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton
+  IconButton,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -23,14 +25,32 @@ function Dashboard() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [open, setOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
     getEvents();
   }, []);
 
-  const handleOpen = () => setOpen(true);
+  const handleOpen = () => {
+    setEditingEvent(null);
+    setTitle("");
+    setDescription("");
+    setLocation("");
+    setOpen(true);
+  };
+
+  const handleEditOpen = (event) => {
+    setEditingEvent(event);
+    setTitle(event.title);
+    setDescription(event.description);
+    setLocation(event.location);
+    setOpen(true);
+  };
+
   const handleClose = () => {
     setOpen(false);
+    setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
@@ -58,8 +78,16 @@ function Dashboard() {
       .catch((error) => alert(error));
   };
 
-  const createEvent = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    if (editingEvent) {
+      updateEvent();
+    } else {
+      createEvent();
+    }
+  };
+
+  const createEvent = () => {
     api
       .post("/api/event/", { title, description, location })
       .then((res) => {
@@ -68,6 +96,20 @@ function Dashboard() {
             getEvents();
         }
         else alert("Error creating event");
+      })
+      .catch((error) => alert(error));
+  };
+
+  const updateEvent = () => {
+    api
+      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location })
+      .then((res) => {
+        if (res.status === 200) {
+            handleClose();
+            getEvents();
+            setSnackbarOpen(true);
+        }
+        else alert("Error updating event");
       })
       .catch((error) => alert(error));
   };
@@ -97,7 +139,7 @@ function Dashboard() {
               <Grid container spacing={2}>
                 {events.map((event) => (
                   <Grid item xs={12} key={event.id}>
-                    <Event event={event} onDelete={deleteEvent} />
+                    <Event event={event} onDelete={deleteEvent} onEdit={handleEditOpen} />
                   </Grid>
                 ))}
               </Grid>
@@ -106,10 +148,10 @@ function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Dialog Creazione Evento */}
+      {/* Dialog Creazione/Modifica Evento */}
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Crea Nuovo Evento
+          {editingEvent ? "Modifica Evento" : "Crea Nuovo Evento"}
           <IconButton
             aria-label="close"
             onClick={handleClose}
@@ -121,7 +163,7 @@ function Dashboard() {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Box component="form" onSubmit={createEvent} noValidate>
+          <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
               margin="normal"
               required
@@ -159,13 +201,31 @@ function Dashboard() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{
+                mt: 3,
+                mb: 2,
+                backgroundColor: editingEvent ? '#ffb74d' : 'primary.main',
+                '&:hover': {
+                  backgroundColor: editingEvent ? '#ffa726' : 'primary.dark',
+                }
+              }}
             >
-              Crea Evento
+              {editingEvent ? "Salva Modifiche" : "Crea Evento"}
             </Button>
           </Box>
         </DialogContent>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+          Evento modificato con successo!
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
