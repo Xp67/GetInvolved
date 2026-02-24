@@ -164,27 +164,6 @@ function Dashboard() {
       case 'eventi':
         return (
           <>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, width: '100%' }}>
-              <Typography variant="h4" fontWeight="bold">
-                Dashboard Eventi
-              </Typography>
-              {hasPermission('events.create') && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleOpen}
-                  sx={{
-                    textTransform: 'none',
-                    px: 4,
-                    borderRadius: 2,
-                    boxShadow: 2
-                  }}
-                >
-                  Crea Evento
-                </Button>
-              )}
-            </Box>
-
             <Grid container spacing={4}>
               <Grid item xs={12}>
                 <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
@@ -239,8 +218,38 @@ function Dashboard() {
     );
   }
 
+  const getSectionTitle = () => {
+    switch (currentSection) {
+      case 'eventi': return "Dashboard Eventi";
+      case 'utenti': return "Gestione Utenti";
+      case 'ruoli': return "Gestione Ruoli e Permessi";
+      default: return "";
+    }
+  };
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold">
+          {getSectionTitle()}
+        </Typography>
+        {currentSection === 'eventi' && hasPermission('events.create') && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleOpen}
+            sx={{
+              textTransform: 'none',
+              px: 4,
+              borderRadius: 2,
+              boxShadow: 2
+            }}
+          >
+            Crea Evento
+          </Button>
+        )}
+      </Box>
+
       <Grid container spacing={3}>
         <Grid item xs={12} md={4} lg={3}>
           <Sidebar
