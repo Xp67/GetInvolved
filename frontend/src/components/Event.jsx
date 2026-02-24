@@ -57,10 +57,45 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
     return (
         <Card sx={{ mb: 2, height: '100%', display: 'flex', flexDirection: 'column', boxShadow: 1, '&:hover': { boxShadow: 3 }, borderRadius: 2 }}>
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ mb: 2 }}>
                     <Typography variant="h6" component="div" fontWeight="bold" color="primary" sx={{ lineHeight: 1.2 }}>
                         {event.title}
                     </Typography>
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{
+                    mb: 2,
+                    flexGrow: 1,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                }}>
+                    {event.description}
+                </Typography>
+
+                <Divider sx={{ my: 1.5 }} />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto' }}>
+                    <Stack spacing={0.5}>
+                        <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                            <LocationOnIcon fontSize="small" color="action" />
+                            <Typography variant="caption" fontWeight="medium">{event.location}</Typography>
+                        </Stack>
+                        <Stack direction="row" flexWrap="wrap" gap={1.5}>
+                            <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                                <CalendarTodayIcon fontSize="small" color="action" />
+                                <Typography variant="caption" fontWeight="medium">{formattedDate}</Typography>
+                            </Stack>
+                            {formattedTime && (
+                                <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                                    <AccessTimeIcon fontSize="small" color="action" />
+                                    <Typography variant="caption" fontWeight="medium">{formattedTime}</Typography>
+                                </Stack>
+                            )}
+                        </Stack>
+                    </Stack>
+
                     <Stack direction="row" spacing={0.5}>
                         <Tooltip title="Visualizza">
                             <IconButton
@@ -104,38 +139,6 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                         )}
                     </Stack>
                 </Box>
-
-                <Typography variant="body2" color="text.secondary" sx={{
-                    mb: 2,
-                    flexGrow: 1,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                }}>
-                    {event.description}
-                </Typography>
-
-                <Divider sx={{ my: 1.5 }} />
-
-                <Stack spacing={1}>
-                    <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
-                        <LocationOnIcon fontSize="small" color="action" />
-                        <Typography variant="caption" fontWeight="medium">{event.location}</Typography>
-                    </Stack>
-                    <Stack direction="row" flexWrap="wrap" gap={2}>
-                        <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
-                            <CalendarTodayIcon fontSize="small" color="action" />
-                            <Typography variant="caption" fontWeight="medium">{formattedDate}</Typography>
-                        </Stack>
-                        {formattedTime && (
-                            <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
-                                <AccessTimeIcon fontSize="small" color="action" />
-                                <Typography variant="caption" fontWeight="medium">{formattedTime}</Typography>
-                            </Stack>
-                        )}
-                    </Stack>
-                </Stack>
             </CardContent>
 
             {/* Dialog di conferma eliminazione */}
