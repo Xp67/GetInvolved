@@ -6,3 +6,10 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Database
+db.sqlite3
+backend/db.sqlite3
+
+# Logs
+*.log
