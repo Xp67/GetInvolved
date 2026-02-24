@@ -73,12 +73,20 @@ function Dashboard() {
     setOpen(true);
   };
 
+  const formatDateTimeForInput = (utcString) => {
+    if (!utcString) return "";
+    const d = new Date(utcString);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const handleEditOpen = (event) => {
     setEditingEvent(event);
     setTitle(event.title);
     setDescription(event.description);
     setLocation(event.location);
-    setEventDate(event.event_date ? event.event_date.slice(0, 16) : "");
+    setEventDate(formatDateTimeForInput(event.event_date));
     setOpen(true);
   };
 
@@ -133,8 +141,14 @@ function Dashboard() {
   };
 
   const createEvent = () => {
+    const eventData = {
+      title,
+      description,
+      location,
+      event_date: eventDate ? new Date(eventDate).toISOString() : null,
+    };
     api
-      .post("/api/event/", { title, description, location, event_date: eventDate })
+      .post("/api/event/", eventData)
       .then((res) => {
         if (res.status === 201) {
             handleClose();
@@ -146,8 +160,14 @@ function Dashboard() {
   };
 
   const updateEvent = () => {
+    const eventData = {
+      title,
+      description,
+      location,
+      event_date: eventDate ? new Date(eventDate).toISOString() : null,
+    };
     api
-      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location, event_date: eventDate })
+      .patch(`/api/event/update/${editingEvent.id}/`, eventData)
       .then((res) => {
         if (res.status === 200) {
             handleClose();
