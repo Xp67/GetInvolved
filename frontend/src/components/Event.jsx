@@ -76,8 +76,8 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
 
                 <Divider sx={{ my: 1.5 }} />
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto' }}>
-                    <Stack spacing={0.5}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', gap: 2 }}>
+                    <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
                         <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
                             <LocationOnIcon fontSize="small" color="action" />
                             <Typography variant="caption" fontWeight="medium">{event.location}</Typography>
