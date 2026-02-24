@@ -32,6 +32,7 @@ function Dashboard() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [eventDate, setEventDate] = useState("");
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -68,6 +69,7 @@ function Dashboard() {
     setTitle("");
     setDescription("");
     setLocation("");
+    setEventDate("");
     setOpen(true);
   };
 
@@ -76,6 +78,7 @@ function Dashboard() {
     setTitle(event.title);
     setDescription(event.description);
     setLocation(event.location);
+    setEventDate(event.event_date ? event.event_date.slice(0, 16) : "");
     setOpen(true);
   };
 
@@ -90,6 +93,7 @@ function Dashboard() {
     setTitle("");
     setDescription("");
     setLocation("");
+    setEventDate("");
   };
 
   const handleViewClose = () => {
@@ -130,7 +134,7 @@ function Dashboard() {
 
   const createEvent = () => {
     api
-      .post("/api/event/", { title, description, location })
+      .post("/api/event/", { title, description, location, event_date: eventDate })
       .then((res) => {
         if (res.status === 201) {
             handleClose();
@@ -143,7 +147,7 @@ function Dashboard() {
 
   const updateEvent = () => {
     api
-      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location })
+      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location, event_date: eventDate })
       .then((res) => {
         if (res.status === 200) {
             handleClose();
@@ -160,12 +164,22 @@ function Dashboard() {
       case 'eventi':
         return (
           <>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, width: '100%' }}>
               <Typography variant="h4" fontWeight="bold">
                 Dashboard Eventi
               </Typography>
               {hasPermission('events.create') && (
-                <Button variant="contained" color="primary" onClick={handleOpen} sx={{ textTransform: 'none' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleOpen}
+                  sx={{
+                    textTransform: 'none',
+                    px: 4,
+                    borderRadius: 2,
+                    boxShadow: 2
+                  }}
+                >
                   Crea Evento
                 </Button>
               )}
@@ -289,6 +303,20 @@ function Dashboard() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="event_date"
+              label="Data e Ora Evento"
+              name="event_date"
+              type="datetime-local"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
             <Button
               type="submit"
               fullWidth
@@ -333,9 +361,17 @@ function Dashboard() {
                   <Typography variant="body2" fontWeight="medium">{viewingEvent.location}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Data Creazione</Typography>
+                  <Typography variant="caption" color="text.secondary">Data e Ora Evento</Typography>
                   <Typography variant="body2" fontWeight="medium">
-                    {new Date(viewingEvent.created_at).toLocaleDateString("it-IT")}
+                    {viewingEvent.event_date
+                      ? new Date(viewingEvent.event_date).toLocaleString("it-IT", {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : "Non impostata"}
                   </Typography>
                 </Grid>
               </Grid>
