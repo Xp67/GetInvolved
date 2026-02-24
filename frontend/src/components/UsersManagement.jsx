@@ -94,7 +94,7 @@ function UsersManagement({ userPermissions = [] }) {
     }
   };
 
-  const usersWithRoles = users.filter(u => u.roles_details.length > 0);
+  const usersWithRoles = users.filter(u => u.roles_details.some(role => role.name !== 'Base'));
   const allUsers = users;
 
   const renderTable = (userList, title) => (
