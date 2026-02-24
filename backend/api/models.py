@@ -46,13 +46,13 @@ class User(AbstractUser):
 
     @property
     def is_super_admin(self):
-        return self.roles.filter(name='Super Admin').exists()
+        return self.is_superuser or self.roles.filter(name='Super Admin').exists()
 
     def get_all_permissions(self):
         if self.is_super_admin:
-            return AppPermission.objects.values_list('codename', flat=True)
+            return list(AppPermission.objects.values_list('codename', flat=True))
 
-        return AppPermission.objects.filter(roles__users=self).values_list('codename', flat=True).distinct()
+        return list(AppPermission.objects.filter(roles__users=self).values_list('codename', flat=True).distinct())
 
     def has_app_permission(self, codename):
         if self.is_super_admin:

@@ -10,11 +10,12 @@ import {
 } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 
-function Event({ event, onDelete, onEdit, canDelete = true, canEdit = true }) {
+function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = true }) {
     const formattedDate = event.created_at
         ? new Date(event.created_at).toLocaleDateString("it-IT", {
             day: 'numeric',
@@ -35,35 +36,47 @@ function Event({ event, onDelete, onEdit, canDelete = true, canEdit = true }) {
                             {event.description}
                         </Typography>
                     </Box>
-                    <Stack direction="row" spacing={1}>
-                        {canEdit && (
-                            <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<EditIcon />}
-                                onClick={() => onEdit(event)}
-                                sx={{
-                                    backgroundColor: '#ffb74d',
-                                    '&:hover': {
-                                        backgroundColor: '#ffa726',
-                                    },
-                                    textTransform: 'none'
-                                }}
-                            >
-                                Modifica
-                            </Button>
-                        )}
-                        {canDelete && (
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                startIcon={<DeleteIcon />}
-                                onClick={() => onDelete(event.id)}
-                            >
-                                Elimina
-                            </Button>
-                        )}
+                    <Stack direction="column" spacing={1} alignItems="flex-end">
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => onView(event)}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Visualizza
+                        </Button>
+                        <Stack direction="row" spacing={1}>
+                            {canEdit && (
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<EditIcon />}
+                                    onClick={() => onEdit(event)}
+                                    sx={{
+                                        backgroundColor: '#ffb74d',
+                                        '&:hover': {
+                                            backgroundColor: '#ffa726',
+                                        },
+                                        textTransform: 'none'
+                                    }}
+                                >
+                                    Modifica
+                                </Button>
+                            )}
+                            {canDelete && (
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    startIcon={<DeleteIcon />}
+                                    onClick={() => onDelete(event.id)}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Elimina
+                                </Button>
+                            )}
+                        </Stack>
                     </Stack>
                 </Stack>
 

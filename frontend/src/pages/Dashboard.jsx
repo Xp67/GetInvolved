@@ -25,6 +25,7 @@ import CloseIcon from "@mui/icons-material/Close";
 function Dashboard() {
   const [currentSection, setCurrentSection] = useState('eventi');
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Event state
   const [events, setEvents] = useState([]);
@@ -32,7 +33,9 @@ function Dashboard() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [open, setOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
@@ -51,6 +54,8 @@ function Dashboard() {
       setUser(res.data);
     } catch (error) {
       console.error("Error fetching user profile", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,12 +79,22 @@ function Dashboard() {
     setOpen(true);
   };
 
+  const handleViewOpen = (event) => {
+    setViewingEvent(event);
+    setViewDialogOpen(true);
+  };
+
   const handleClose = () => {
     setOpen(false);
     setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
+  };
+
+  const handleViewClose = () => {
+    setViewDialogOpen(false);
+    setViewingEvent(null);
   };
 
   const getEvents = () => {
@@ -128,7 +143,7 @@ function Dashboard() {
 
   const updateEvent = () => {
     api
-      .patch(`/api/event/${editingEvent.id}/`, { title, description, location })
+      .patch(`/api/event/update/${editingEvent.id}/`, { title, description, location })
       .then((res) => {
         if (res.status === 200) {
             handleClose();
@@ -150,7 +165,7 @@ function Dashboard() {
                 Dashboard Eventi
               </Typography>
               {hasPermission('events.create') && (
-                <Button variant="contained" color="primary" onClick={handleOpen}>
+                <Button variant="contained" color="primary" onClick={handleOpen} sx={{ textTransform: 'none' }}>
                   Crea Evento
                 </Button>
               )}
@@ -164,15 +179,23 @@ function Dashboard() {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                   {events.length === 0 ? (
-                    <Typography color="text.secondary">Non ci sono eventi da visualizzare.</Typography>
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                      <Typography color="text.secondary" gutterBottom>Non ci sono eventi da visualizzare.</Typography>
+                      {hasPermission('events.create') && (
+                        <Button variant="outlined" sx={{ mt: 2, textTransform: 'none' }} onClick={handleOpen}>
+                          Crea il tuo primo evento
+                        </Button>
+                      )}
+                    </Box>
                   ) : (
-                    <Grid container spacing={2}>
+                    <Grid container spacing={3}>
                       {events.map((event) => (
-                        <Grid item xs={12} key={event.id}>
+                        <Grid item xs={12} sm={6} lg={4} key={event.id}>
                           <Event
                             event={event}
                             onDelete={deleteEvent}
                             onEdit={handleEditOpen}
+                            onView={handleViewOpen}
                             canDelete={hasPermission('events.delete_all') || (hasPermission('events.delete_own') && event.organizer === user?.id)}
                             canEdit={hasPermission('events.edit_all') || (hasPermission('events.edit_own') && event.organizer === user?.id)}
                           />
@@ -194,17 +217,25 @@ function Dashboard() {
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography variant="h6">Caricamento Dashboard...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={3} lg={2}>
+        <Grid item xs={12} md={4} lg={3}>
           <Sidebar
             currentSection={currentSection}
             onSectionChange={setCurrentSection}
             userPermissions={user?.all_permissions}
           />
         </Grid>
-        <Grid item xs={12} md={9} lg={10}>
+        <Grid item xs={12} md={8} lg={9}>
           {renderSection()}
         </Grid>
       </Grid>
@@ -275,6 +306,41 @@ function Dashboard() {
               {editingEvent ? "Salva Modifiche" : "Crea Evento"}
             </Button>
           </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Visualizzazione Evento */}
+      <Dialog open={viewDialogOpen} onClose={handleViewClose} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Dettagli Evento
+          <IconButton onClick={handleViewClose} sx={{ color: (theme) => theme.palette.grey[500] }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {viewingEvent && (
+            <Box>
+              <Typography variant="h5" gutterBottom color="primary" fontWeight="bold">
+                {viewingEvent.title}
+              </Typography>
+              <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>
+                {viewingEvent.description}
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">Luogo</Typography>
+                  <Typography variant="body2" fontWeight="medium">{viewingEvent.location}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">Data Creazione</Typography>
+                  <Typography variant="body2" fontWeight="medium">
+                    {new Date(viewingEvent.created_at).toLocaleDateString("it-IT")}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -40,8 +40,8 @@ function Sidebar({ currentSection, onSectionChange, userPermissions = [] }) {
   ];
 
   return (
-    <Paper sx={{ width: 240, height: 'calc(100vh - 100px)', position: 'sticky', top: 20, borderRadius: 2 }} elevation={0} variant="outlined">
-      <Box sx={{ p: 2 }}>
+    <Paper sx={{ width: '100%', maxWidth: 280, height: 'calc(100vh - 100px)', position: 'sticky', top: 20, borderRadius: 2 }} elevation={0} variant="outlined">
+      <Box sx={{ p: 1 }}>
         <List>
           {menuItems.filter(item => item.show).map((item) => (
             <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
