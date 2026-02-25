@@ -23,6 +23,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { ACCESS_TOKEN } from '../constants';
 import api from '../api';
+import { canAccessPosition } from '../utils/permissionUtils';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ function Navbar() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
+  const [user, setUser] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -38,27 +39,29 @@ function Navbar() {
     const token = localStorage.getItem(ACCESS_TOKEN);
     setIsLoggedIn(!!token);
     if (token) {
-      fetchUsername();
+      fetchUserProfile();
     }
   }, [location]);
 
-  const fetchUsername = async () => {
+  const fetchUserProfile = async () => {
     try {
       const res = await api.get("/api/user/profile/");
-      setUsername(res.data.username);
+      setUser(res.data);
     } catch (error) {
-      console.error("Error fetching username", error);
+      console.error("Error fetching user profile", error);
       // If unauthorized or token is lost, we should clear the state
       localStorage.clear();
       setIsLoggedIn(false);
-      setUsername("");
+      setUser(null);
     }
   };
+
+  const canSeeDashboard = isLoggedIn && canAccessPosition(user, 'dashboard');
 
   const navItems = [
     { label: 'Home', path: '/' },
     ...(isLoggedIn ? [
-      { label: 'Dashboard', path: '/dashboard' },
+      ...(canSeeDashboard ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
       ...(isMobile ? [] : [{ label: 'Profilo', path: '/profile' }]),
       { label: 'Esci', path: '/logout', color: 'error.main' }
     ] : [
@@ -95,7 +98,9 @@ function Navbar() {
                 </>
               ) : (
                 <>
-                  <Button color="inherit" onClick={() => navigate('/dashboard')}>Dashboard</Button>
+                  {canSeeDashboard && (
+                    <Button color="inherit" onClick={() => navigate('/dashboard')}>Dashboard</Button>
+                  )}
 
                   <Button
                     onClick={() => navigate('/profile')}
@@ -103,10 +108,10 @@ function Navbar() {
                     sx={{ textTransform: 'none', display: 'flex', alignItems: 'center', ml: 2, px: 1 }}
                   >
                     <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main', fontSize: '1rem' }}>
-                      {username ? username[0].toUpperCase() : <AccountCircle />}
+                      {user?.username ? user.username[0].toUpperCase() : <AccountCircle />}
                     </Avatar>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {username}
+                      {user?.username}
                     </Typography>
                   </Button>
 
@@ -151,10 +156,10 @@ function Navbar() {
                   sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                 >
                   <Avatar sx={{ width: 64, height: 64, mb: 1, bgcolor: 'primary.main', fontSize: '2rem' }}>
-                    {username ? username[0].toUpperCase() : <AccountCircle />}
+                    {user?.username ? user.username[0].toUpperCase() : <AccountCircle />}
                   </Avatar>
                   <Typography variant="h6" fontWeight="bold">
-                    {username}
+                    {user?.username}
                   </Typography>
                 </Box>
               )}

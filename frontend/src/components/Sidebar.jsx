@@ -12,30 +12,27 @@ import {
 import EventIcon from '@mui/icons-material/Event';
 import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
+import { canAccessSection } from '../utils/permissionUtils';
 
-function Sidebar({ currentSection, onSectionChange, userPermissions = [] }) {
-  const hasPermission = (perm) => {
-    return userPermissions.includes(perm);
-  };
-
+function Sidebar({ currentSection, onSectionChange, user }) {
   const menuItems = [
     {
       id: 'eventi',
       label: 'Eventi',
       icon: <EventIcon />,
-      show: hasPermission('events.view_own') || hasPermission('events.view_all')
+      show: canAccessSection(user, 'eventi')
     },
     {
       id: 'utenti',
       label: 'Utenti',
       icon: <PeopleIcon />,
-      show: hasPermission('users.view')
+      show: canAccessSection(user, 'utenti')
     },
     {
       id: 'ruoli',
       label: 'Ruoli e permessi',
       icon: <SecurityIcon />,
-      show: hasPermission('roles.view')
+      show: canAccessSection(user, 'ruoli')
     },
   ];
 

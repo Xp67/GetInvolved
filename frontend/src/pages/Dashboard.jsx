@@ -4,6 +4,7 @@ import Event from "../components/Event";
 import Sidebar from "../components/Sidebar";
 import RolesManagement from "../components/RolesManagement";
 import UsersManagement from "../components/UsersManagement";
+import { hasPermission as checkPerm } from "../utils/permissionUtils";
 import {
   Container,
   Typography,
@@ -68,7 +69,7 @@ function Dashboard() {
   };
 
   const hasPermission = (perm) => {
-    return user?.all_permissions?.includes(perm);
+    return checkPerm(user, perm);
   };
 
   const handleOpen = () => {
@@ -295,7 +296,7 @@ function Dashboard() {
         <Sidebar
           currentSection={currentSection}
           onSectionChange={handleSectionChange}
-          userPermissions={user?.all_permissions}
+          user={user}
         />
       </Drawer>
 
@@ -326,7 +327,7 @@ function Dashboard() {
             <Sidebar
               currentSection={currentSection}
               onSectionChange={setCurrentSection}
-              userPermissions={user?.all_permissions}
+              user={user}
             />
           </Grid>
         )}
