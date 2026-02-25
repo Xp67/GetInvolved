@@ -3,8 +3,15 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import string
+import secrets
 
 # Create your models here.
+
+def generate_affiliate_code():
+    length = 8
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(length))
 
 class PermissionCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -35,6 +42,9 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     bio = models.TextField(max_length=500, blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    affiliate_code = models.CharField(max_length=15, unique=True, blank=True)
+    affiliated_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='affiliates')
+    affiliation_date = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -43,6 +53,14 @@ class User(AbstractUser):
         return self.email
 
     def save(self, *args, **kwargs):
+        if not self.affiliate_code:
+            self.affiliate_code = generate_affiliate_code()
+            while User.objects.filter(affiliate_code=self.affiliate_code).exists():
+                self.affiliate_code = generate_affiliate_code()
+
+        if self.affiliate_code:
+            self.affiliate_code = self.affiliate_code.upper()
+
         if self.email:
             self.email = self.email.lower()
         super().save(*args, **kwargs)

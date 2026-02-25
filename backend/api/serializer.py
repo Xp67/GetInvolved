@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Event, Role, AppPermission, PermissionCategory
 
@@ -40,21 +41,30 @@ class UserSerializer(serializers.ModelSerializer):
         required=False
     )
     all_permissions = serializers.SerializerMethodField()
+    affiliated_to_username = serializers.SerializerMethodField()
+    affiliated_to_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone_number', 'bio', 'avatar', 'password',
-            'roles_details', 'role_ids', 'all_permissions', 'is_super_admin'
+            'roles_details', 'role_ids', 'all_permissions', 'is_super_admin',
+            'affiliate_code', 'affiliated_to_username', 'affiliated_to_code', 'affiliation_date'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
-            'email': {'required': True}
+            'email': {'required': True},
+            'affiliate_code': {'required': False}
         }
 
     def get_all_permissions(self, obj):
         return obj.get_all_permissions()
+
+    def get_affiliated_to_username(self, obj):
+        if obj.affiliated_to:
+            return obj.affiliated_to.username
+        return None
 
     def create(self, validated_data):
         role_ids = validated_data.pop('roles', [])
@@ -74,6 +84,28 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        affiliated_to_code = validated_data.pop('affiliated_to_code', None)
+        if affiliated_to_code is not None:
+            if affiliated_to_code == "":
+                instance.affiliated_to = None
+                instance.affiliation_date = None
+            else:
+                try:
+                    target_user = User.objects.get(affiliate_code__iexact=affiliated_to_code)
+                    if target_user == instance:
+                        raise serializers.ValidationError({"affiliated_to_code": "Non puoi affiliarti a te stesso."})
+                    instance.affiliated_to = target_user
+                    instance.affiliation_date = timezone.now()
+                except User.DoesNotExist:
+                    raise serializers.ValidationError({"affiliated_to_code": "Codice affiliato non valido."})
+
+        affiliate_code = validated_data.get('affiliate_code')
+        if affiliate_code:
+            affiliate_code = affiliate_code.upper()
+            if User.objects.filter(affiliate_code__iexact=affiliate_code).exclude(id=instance.id).exists():
+                raise serializers.ValidationError({"affiliate_code": "Questo codice è già in uso."})
+            validated_data['affiliate_code'] = affiliate_code
+
         role_ids = validated_data.pop('roles', None)
         if role_ids is not None:
             # Prevent assigning or removing Super Admin if the requester is not a Super Admin
@@ -113,6 +145,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+
+class AffiliateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'avatar', 'affiliation_date']
     
 class EventSerializer(serializers.ModelSerializer):
     

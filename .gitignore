@@ -13,3 +13,6 @@ backend/db.sqlite3
 
 # Logs
 *.log
+
+# Node modules
+node_modules/

@@ -4,7 +4,7 @@ from rest_framework import generics, filters
 from .serializer import (
     UserSerializer, EventSerializer, RoleSerializer,
     PermissionCategorySerializer, AppPermissionSerializer,
-    RegisterSerializer
+    RegisterSerializer, AffiliateSerializer
 )
 
 User = get_user_model()
@@ -120,3 +120,18 @@ class UserUpdate(generics.UpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [HasAppPermission]
     required_permission = 'users.assign_roles'
+
+from rest_framework.pagination import PageNumberPagination
+
+class AffiliatePagination(PageNumberPagination):
+    page_size = 20
+
+class AffiliateList(generics.ListAPIView):
+    serializer_class = AffiliateSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = AffiliatePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email']
+
+    def get_queryset(self):
+        return User.objects.filter(affiliated_to=self.request.user).order_by('-affiliation_date')
