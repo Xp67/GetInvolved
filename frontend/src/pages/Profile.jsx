@@ -30,6 +30,9 @@ import {
   TableRow,
   Paper,
   Pagination,
+  Drawer,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PersonIcon from '@mui/icons-material/Person';
@@ -42,8 +45,12 @@ import SaveIcon from '@mui/icons-material/Save';
 import SyncIcon from '@mui/icons-material/Sync';
 import SearchIcon from '@mui/icons-material/Search';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import MenuIcon from '@mui/icons-material/Menu';
 
 function Profile() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [profile, setProfile] = useState({
     username: "",
     email: "",
@@ -226,13 +233,62 @@ function Profile() {
 
   if (loading) return <Typography sx={{ p: 4 }}>Caricamento...</Typography>;
 
+  const renderSidebarContent = () => (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h6" fontWeight="bold" sx={{ mb: 4, px: 2 }}>
+        Impostazioni
+      </Typography>
+      <List component="nav" sx={{ '& .MuiListItemButton-root': { borderRadius: 2, mb: 1, px: 2 } }}>
+        <ListItemButton
+          selected={activeSection === "personal_info"}
+          onClick={() => {
+            setActiveSection("personal_info");
+            setDrawerOpen(false);
+          }}
+          sx={{
+            '&.Mui-selected': {
+              bgcolor: 'primary.lighter',
+              color: 'primary.main',
+              '& .MuiListItemIcon-root': { color: 'primary.main' }
+            }
+          }}
+        >
+          <ListItemIcon>
+            <PersonIcon />
+          </ListItemIcon>
+          <ListItemText primary="Informazioni Personali" primaryTypographyProps={{ fontWeight: activeSection === "personal_info" ? 'bold' : 'medium' }} />
+        </ListItemButton>
+
+        <ListItemButton
+          selected={activeSection === "affiliated_users"}
+          onClick={() => {
+            setActiveSection("affiliated_users");
+            setDrawerOpen(false);
+          }}
+          sx={{
+            '&.Mui-selected': {
+              bgcolor: 'primary.lighter',
+              color: 'primary.main',
+              '& .MuiListItemIcon-root': { color: 'primary.main' }
+            }
+          }}
+        >
+          <ListItemIcon>
+            <PeopleIcon />
+          </ListItemIcon>
+          <ListItemText primary="Utenti Affiliati" primaryTypographyProps={{ fontWeight: activeSection === "affiliated_users" ? 'bold' : 'medium' }} />
+        </ListItemButton>
+      </List>
+    </Box>
+  );
+
   const renderPersonalInfo = () => (
     <Box component="form" onSubmit={handleUpdate} noValidate sx={{ width: '100%' }}>
-      <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ mb: 6, color: 'text.primary' }}>
+      <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold" sx={{ mb: isMobile ? 4 : 6, color: 'text.primary' }}>
         Informazioni Personali
       </Typography>
 
-      <Grid container spacing={6}>
+      <Grid container spacing={isMobile ? 4 : 6}>
         {/* Avatar Section */}
         <Grid item xs={12} lg={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Tooltip title="Clicca per cambiare immagine" placement="top">
@@ -243,8 +299,8 @@ function Profile() {
               sx={{
                 position: 'relative',
                 cursor: 'pointer',
-                width: 220,
-                height: 220,
+                width: isMobile ? 160 : 220,
+                height: isMobile ? 160 : 220,
                 mb: 2,
               }}
             >
@@ -253,10 +309,10 @@ function Profile() {
                 sx={{
                   width: '100%',
                   height: '100%',
-                  border: '8px solid #fff',
+                  border: isMobile ? '4px solid #fff' : '8px solid #fff',
                   boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
                   bgcolor: 'primary.light',
-                  fontSize: 80
+                  fontSize: isMobile ? 60 : 80
                 }}
               >
                 {!profile.avatar && (profile.first_name ? profile.first_name[0] : profile.username[0])}
@@ -402,15 +458,16 @@ function Profile() {
             </Grid>
           </Grid>
 
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: isMobile ? 'center' : 'flex-end' }}>
             <Button
               type="submit"
               variant="contained"
               size="large"
+              fullWidth={isMobile}
               disabled={saving}
               startIcon={saving ? null : <SaveIcon />}
               sx={{
-                px: 6,
+                px: isMobile ? 4 : 6,
                 py: 1.5,
                 borderRadius: 2,
                 textTransform: 'none',
@@ -434,19 +491,19 @@ function Profile() {
 
   const renderAffiliatedUsers = () => (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ mb: 6 }}>
+      <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold" sx={{ mb: isMobile ? 4 : 6 }}>
         Utenti Affiliati
       </Typography>
 
-      <Grid container spacing={2} sx={{ mb: 4 }}>
+      <Grid container spacing={isMobile ? 2 : 4} sx={{ mb: isMobile ? 4 : 8 }}>
         {/* Top Left: My Affiliate Code */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '60%', bgcolor: 'white' }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Il tuo Codice Affiliato
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="h3" fontWeight="900" sx={{ color: 'primary.main', letterSpacing: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 2, flexWrap: 'wrap' }}>
+              <Typography variant={isMobile ? "h4" : "h3"} fontWeight="900" sx={{ color: 'primary.main', letterSpacing: isMobile ? 1 : 2 }}>
                 {profile.affiliate_code}
               </Typography>
               <Tooltip title="Copia">
@@ -473,14 +530,14 @@ function Profile() {
 
         {/* Top Right: Affiliated To */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '60%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: isMobile ? 1 : 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Affiliato a
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               {profile.affiliated_to_username ? (
                 <>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant={isMobile ? "h5" : "h4"} fontWeight="bold">
                     {profile.affiliated_to_username}
                   </Typography>
                   <Tooltip title="Cambia Affiliazione">
@@ -530,8 +587,8 @@ function Profile() {
       </Grid>
 
       {/* Affiliates List */}
-      <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { sm: 'center' }, gap: 2 }}>
-        <Typography variant="h5" fontWeight="bold">
+      <Box sx={{ mb: 4, display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 2 }}>
+        <Typography variant={isMobile ? "h6" : "h5"} fontWeight="bold">
           I tuoi Affiliati
         </Typography>
         <TextField
@@ -550,8 +607,8 @@ function Profile() {
         />
       </Box>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
-        <Table>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflowX: 'auto' }}>
+        <Table sx={{ minWidth: isMobile ? 350 : 500 }}>
           <TableHead sx={{ bgcolor: '#f8f9fa' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Utente</TableCell>
@@ -616,8 +673,40 @@ function Profile() {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 64px)', bgcolor: '#f9fafb' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 64px)', bgcolor: '#f9fafb', position: 'relative' }}>
+      {/* Burger Menu Button (Mobile) */}
+      {isMobile && (
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            bgcolor: 'primary.main',
+            color: 'white',
+            boxShadow: 3,
+            zIndex: 1000,
+            '&:hover': { bgcolor: 'primary.dark' }
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: 300, boxSizing: 'border-box' }
+        }}
+      >
+        {renderSidebarContent()}
+      </Drawer>
+
+      {/* Desktop Sidebar */}
       <Box
         sx={{
           width: 300,
@@ -634,46 +723,7 @@ function Profile() {
           zIndex: 10
         }}
       >
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight="bold" sx={{ mb: 4, px: 2 }}>
-            Impostazioni
-          </Typography>
-          <List component="nav" sx={{ '& .MuiListItemButton-root': { borderRadius: 2, mb: 1, px: 2 } }}>
-            <ListItemButton
-              selected={activeSection === "personal_info"}
-              onClick={() => setActiveSection("personal_info")}
-              sx={{
-                '&.Mui-selected': {
-                  bgcolor: 'primary.lighter',
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': { color: 'primary.main' }
-                }
-              }}
-            >
-              <ListItemIcon>
-                <PersonIcon />
-              </ListItemIcon>
-              <ListItemText primary="Informazioni Personali" primaryTypographyProps={{ fontWeight: activeSection === "personal_info" ? 'bold' : 'medium' }} />
-            </ListItemButton>
-
-            <ListItemButton
-              selected={activeSection === "affiliated_users"}
-              onClick={() => setActiveSection("affiliated_users")}
-              sx={{
-                '&.Mui-selected': {
-                  bgcolor: 'primary.lighter',
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': { color: 'primary.main' }
-                }
-              }}
-            >
-              <ListItemIcon>
-                <PeopleIcon />
-              </ListItemIcon>
-              <ListItemText primary="Utenti Affiliati" primaryTypographyProps={{ fontWeight: activeSection === "affiliated_users" ? 'bold' : 'medium' }} />
-            </ListItemButton>
-          </List>
-        </Box>
+        {renderSidebarContent()}
       </Box>
 
       {/* Main Content */}
@@ -681,7 +731,7 @@ function Profile() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 3, md: 8 },
+          p: { xs: 2, sm: 3, md: 8 },
           overflowY: 'auto',
         }}
       >
