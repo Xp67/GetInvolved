@@ -65,16 +65,22 @@ function Form({ route, method }) {
 
                 {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
 
-                <Box component="form" onSubmit={handleSubmit} method="POST" sx={{ mt: 3, width: '100%' }}>
+                <Box
+                    component="form"
+                    onSubmit={handleSubmit}
+                    autoComplete="on"
+                    action={route}
+                    sx={{ mt: 3, width: "100%" }}
+                >
                     {method === "register" && (
                         <TextField
                             margin="normal"
                             required
                             fullWidth
-                            id="nickname"
+                            id="display-name"
                             label="Username"
-                            name="nickname"
-                            autoComplete="nickname"
+                            name="displayName"
+                            autoComplete="off"
                             autoFocus
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -84,7 +90,7 @@ function Form({ route, method }) {
                         margin="normal"
                         required
                         fullWidth
-                        id="username-email"
+                        id="auth-username"
                         label="Indirizzo Email"
                         name="username"
                         type="email"
@@ -100,7 +106,7 @@ function Form({ route, method }) {
                         name="password"
                         label="Password"
                         type="password"
-                        id="password"
+                        id="auth-password"
                         autoComplete={method === "login" ? "current-password" : "new-password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
