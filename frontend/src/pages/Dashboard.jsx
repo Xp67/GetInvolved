@@ -18,11 +18,18 @@ import {
   DialogContent,
   IconButton,
   Snackbar,
-  Alert
+  Alert,
+  useTheme,
+  useMediaQuery,
+  Drawer
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import MenuIcon from "@mui/icons-material/Menu";
 
 function Dashboard() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState('eventi');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -247,8 +254,51 @@ function Dashboard() {
     }
   };
 
+  const handleSectionChange = (section) => {
+    setCurrentSection(section);
+    setDrawerOpen(false);
+  };
+
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: isMobile ? 10 : 4, mb: 4 }}>
+      {/* Burger Menu Button (Mobile) */}
+      {isMobile && (
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            position: 'fixed',
+            top: 76,
+            left: 16,
+            bgcolor: 'primary.main',
+            color: 'white',
+            boxShadow: 3,
+            zIndex: 1000,
+            '&:hover': { bgcolor: 'primary.dark' },
+            width: 40,
+            height: 40
+          }}
+        >
+          <MenuIcon fontSize="small" />
+        </IconButton>
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box', pt: 2 }
+        }}
+      >
+        <Sidebar
+          currentSection={currentSection}
+          onSectionChange={handleSectionChange}
+          userPermissions={user?.all_permissions}
+        />
+      </Drawer>
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" fontWeight="bold">
           {getSectionTitle()}
@@ -271,14 +321,16 @@ function Dashboard() {
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
-          <Sidebar
-            currentSection={currentSection}
-            onSectionChange={setCurrentSection}
-            userPermissions={user?.all_permissions}
-          />
-        </Grid>
-        <Grid item xs={12} md={8} lg={9}>
+        {!isMobile && (
+          <Grid item xs={12} md={4} lg={3}>
+            <Sidebar
+              currentSection={currentSection}
+              onSectionChange={setCurrentSection}
+              userPermissions={user?.all_permissions}
+            />
+          </Grid>
+        )}
+        <Grid item xs={12} md={isMobile ? 12 : 8} lg={isMobile ? 12 : 9}>
           {renderSection()}
         </Grid>
       </Grid>

@@ -495,10 +495,10 @@ function Profile() {
         Utenti Affiliati
       </Typography>
 
-      <Grid container spacing={isMobile ? 2 : 4} sx={{ mb: isMobile ? 4 : 8 }}>
+      <Grid container spacing={isMobile ? 2 : 4} sx={{ mb: isMobile ? 4 : 8 }} alignItems="stretch">
         {/* Top Left: My Affiliate Code */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white' }}>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Il tuo Codice Affiliato
             </Typography>
@@ -529,8 +529,8 @@ function Profile() {
         </Grid>
 
         {/* Top Right: Affiliated To */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: isMobile ? 1 : 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Affiliato a
             </Typography>
@@ -680,16 +680,18 @@ function Profile() {
           onClick={() => setDrawerOpen(true)}
           sx={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
+            top: 76,
+            left: 16,
             bgcolor: 'primary.main',
             color: 'white',
             boxShadow: 3,
             zIndex: 1000,
-            '&:hover': { bgcolor: 'primary.dark' }
+            '&:hover': { bgcolor: 'primary.dark' },
+            width: 40,
+            height: 40
           }}
         >
-          <MenuIcon />
+          <MenuIcon fontSize="small" />
         </IconButton>
       )}
 
@@ -732,6 +734,7 @@ function Profile() {
         sx={{
           flexGrow: 1,
           p: { xs: 2, sm: 3, md: 8 },
+          pt: { xs: 10, sm: 3, md: 8 },
           overflowY: 'auto',
         }}
       >
