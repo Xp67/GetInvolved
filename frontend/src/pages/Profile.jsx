@@ -438,10 +438,10 @@ function Profile() {
         Utenti Affiliati
       </Typography>
 
-      <Grid container spacing={4} sx={{ mb: 8 }}>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
         {/* Top Left: My Affiliate Code */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white' }}>
+          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '60%', bgcolor: 'white' }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Il tuo Codice Affiliato
             </Typography>
@@ -473,8 +473,8 @@ function Profile() {
 
         {/* Top Right: Affiliated To */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '60%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Affiliato a
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
