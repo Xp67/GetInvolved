@@ -36,8 +36,10 @@ function Navbar() {
       setUsername(res.data.username);
     } catch (error) {
       console.error("Error fetching username", error);
-      // If unauthorized, the interceptor should handle it,
-      // but here we just ensure we don't show a broken username
+      // If unauthorized or token is lost, we should clear the state
+      localStorage.clear();
+      setIsLoggedIn(false);
+      setUsername("");
     }
   };
 
@@ -59,7 +61,7 @@ function Navbar() {
 
             {!isLoggedIn ? (
               <>
-                <Button color="inherit" onClick={() => navigate('/login')} sx={{ textTransform: 'none' }}>Inizia ora</Button>
+                <Button color="inherit" onClick={() => navigate('/login')} sx={{ textTransform: 'none' }}>ACCEDI</Button>
               </>
             ) : (
               <>
