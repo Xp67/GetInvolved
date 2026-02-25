@@ -49,17 +49,31 @@ function LandingPage() {
         sx={{
           bgcolor: 'primary.main',
           color: 'white',
-          py: 8,
+          py: { xs: 6, md: 10 },
           textAlign: 'center',
-          borderRadius: '0 0 50px 50px',
+          borderRadius: { xs: '0 0 30px 30px', md: '0 0 50px 50px' },
           mb: 6
         }}
       >
         <Container maxWidth="md">
-          <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
+          <Typography
+            variant="h2"
+            component="h1"
+            gutterBottom
+            fontWeight="bold"
+            sx={{ fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' } }}
+          >
             Benvenuto su GetInvolved
           </Typography>
-          <Typography variant="h5" paragraph sx={{ mb: 4, opacity: 0.9 }}>
+          <Typography
+            variant="h5"
+            paragraph
+            sx={{
+              mb: 4,
+              opacity: 0.9,
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}
+          >
             La piattaforma all-in-one per i tuoi eventi e la gestione dei tuoi progetti.
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">

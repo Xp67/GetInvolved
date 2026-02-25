@@ -57,8 +57,16 @@ function Form({ route, method }) {
     };
 
     return (
-        <Container maxWidth="xs" sx={{ mt: 8 }}>
-            <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Container maxWidth="xs" sx={{ mt: { xs: 4, sm: 8 } }}>
+            <Paper
+                elevation={3}
+                sx={{
+                    p: { xs: 3, sm: 4 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                }}
+            >
                 <Typography component="h1" variant="h5" fontWeight="bold">
                     {name}
                 </Typography>
