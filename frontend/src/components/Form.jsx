@@ -71,9 +71,9 @@ function Form({ route, method }) {
                             margin="normal"
                             required
                             fullWidth
-                            id="username"
+                            id="nickname"
                             label="Username"
-                            name="username"
+                            name="nickname"
                             autoComplete="nickname"
                             autoFocus
                             value={username}
@@ -84,11 +84,11 @@ function Form({ route, method }) {
                         margin="normal"
                         required
                         fullWidth
-                        id="email"
+                        id="username-email"
                         label="Indirizzo Email"
-                        name="email"
+                        name="username"
                         type="email"
-                        autoComplete="username email"
+                        autoComplete="username"
                         autoFocus={method === "login"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
