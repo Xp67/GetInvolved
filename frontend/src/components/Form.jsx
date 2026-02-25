@@ -44,7 +44,7 @@ function Form({ route, method }) {
                 }
                 localStorage.setItem(ACCESS_TOKEN, access);
                 localStorage.setItem(REFRESH_TOKEN, refresh);
-                navigate("/dashboard");
+                navigate("/");
             } else {
                 navigate("/login");
             }
