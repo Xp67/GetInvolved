@@ -355,7 +355,7 @@ function Profile() {
 
         {/* Fields Section */}
         <Grid item xs={12} lg={8}>
-          <Grid container spacing={3}>
+          <Grid container spacing={3} justifyContent={isMobile ? "center" : "flex-start"}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
