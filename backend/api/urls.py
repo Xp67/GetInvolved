@@ -12,5 +12,6 @@ urlpatterns = [
     path("permissions/categories/", views.PermissionCategoryList.as_view(), name="permission-category-list"),
     path("users/", views.UserList.as_view(), name="user-list"),
     path("users/<int:pk>/", views.UserUpdate.as_view(), name="user-update"),
+    path("user/affiliates/", views.AffiliateList.as_view(), name="affiliate-list"),
 ]
 

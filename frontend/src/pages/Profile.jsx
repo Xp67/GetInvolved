@@ -17,7 +17,19 @@ import {
   Snackbar,
   IconButton,
   Tooltip,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Pagination,
 } from "@mui/material";
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PersonIcon from '@mui/icons-material/Person';
@@ -27,6 +39,9 @@ import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import InfoIcon from '@mui/icons-material/Info';
 import SaveIcon from '@mui/icons-material/Save';
+import SyncIcon from '@mui/icons-material/Sync';
+import SearchIcon from '@mui/icons-material/Search';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 function Profile() {
   const [profile, setProfile] = useState({
@@ -37,6 +52,9 @@ function Profile() {
     phone_number: "",
     bio: "",
     avatar: null,
+    affiliate_code: "",
+    affiliated_to_username: null,
+    affiliation_date: null,
   });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: "success", text: "" });
@@ -46,9 +64,27 @@ function Profile() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Affiliate section states
+  const [affiliates, setAffiliates] = useState([]);
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [openAffiliateDialog, setOpenAffiliateDialog] = useState(false);
+  const [newAffiliateCode, setNewAffiliateCode] = useState("");
+  const [affiliateError, setAffiliateError] = useState("");
+  const [openEditCodeDialog, setOpenEditCodeDialog] = useState(false);
+  const [editedAffiliateCode, setEditedAffiliateCode] = useState("");
+
   useEffect(() => {
     getProfile();
   }, []);
+
+  useEffect(() => {
+    if (activeSection === "affiliated_users") {
+      getAffiliates();
+    }
+  }, [activeSection, page, searchQuery]);
 
   const getProfile = () => {
     api
@@ -63,12 +99,68 @@ function Profile() {
           phone_number: data.phone_number || "",
           bio: data.bio || "",
           avatar: data.avatar || null,
+          affiliate_code: data.affiliate_code || "",
+          affiliated_to_username: data.affiliated_to_username || null,
+          affiliation_date: data.affiliation_date || null,
         });
         setLoading(false);
       })
       .catch((error) => {
         console.error(error);
         setLoading(false);
+      });
+  };
+
+  const getAffiliates = () => {
+    setAffiliatesLoading(true);
+    api
+      .get(`/api/user/affiliates/?page=${page}&search=${searchQuery}`)
+      .then((res) => {
+        // DRF might return paginated results or a simple list
+        if (res.data.results) {
+          setAffiliates(res.data.results);
+          setTotalPages(Math.ceil(res.data.count / 20));
+        } else {
+          setAffiliates(res.data);
+          setTotalPages(1);
+        }
+      })
+      .catch((error) => console.error(error))
+      .finally(() => setAffiliatesLoading(false));
+  };
+
+  const handleUpdateAffiliation = () => {
+    setAffiliateError("");
+    api
+      .patch("/api/user/profile/", { affiliated_to_code: newAffiliateCode.toUpperCase() })
+      .then((res) => {
+        setProfile({
+          ...profile,
+          affiliated_to_username: res.data.affiliated_to_username,
+          affiliation_date: res.data.affiliation_date
+        });
+        setOpenAffiliateDialog(false);
+        setMessage({ type: "success", text: "Affiliazione aggiornata con successo!" });
+        setOpenSnackbar(true);
+      })
+      .catch((error) => {
+        const errorMsg = error.response?.data?.affiliated_to_code || "Codice non valido.";
+        setAffiliateError(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
+      });
+  };
+
+  const handleUpdateOwnCode = () => {
+    api
+      .patch("/api/user/profile/", { affiliate_code: editedAffiliateCode.toUpperCase() })
+      .then((res) => {
+        setProfile({ ...profile, affiliate_code: res.data.affiliate_code });
+        setOpenEditCodeDialog(false);
+        setMessage({ type: "success", text: "Codice affiliato aggiornato!" });
+        setOpenSnackbar(true);
+      })
+      .catch((error) => {
+        const errorMsg = error.response?.data?.affiliate_code || "Errore durante l'aggiornamento.";
+        setAffiliateError(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
       });
   };
 
@@ -341,19 +433,185 @@ function Profile() {
   );
 
   const renderAffiliatedUsers = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ mb: 4 }}>
+    <Box sx={{ width: '100%' }}>
+      <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ mb: 6 }}>
         Utenti Affiliati
       </Typography>
-      <Box sx={{ p: 10, border: '2px dashed', borderColor: 'divider', borderRadius: 4, textAlign: 'center' }}>
-        <PeopleIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">
-          Questa sezione sarà disponibile a breve.
+
+      <Grid container spacing={4} sx={{ mb: 8 }}>
+        {/* Top Left: My Affiliate Code */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+              Il tuo Codice Affiliato
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="h3" fontWeight="900" sx={{ color: 'primary.main', letterSpacing: 2 }}>
+                {profile.affiliate_code}
+              </Typography>
+              <Tooltip title="Copia">
+                <IconButton onClick={() => {
+                  navigator.clipboard.writeText(profile.affiliate_code);
+                  setMessage({ type: "success", text: "Codice copiato!" });
+                  setOpenSnackbar(true);
+                }}>
+                  <ContentCopyIcon color="action" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Personalizza">
+                <IconButton onClick={() => {
+                  setEditedAffiliateCode(profile.affiliate_code);
+                  setAffiliateError("");
+                  setOpenEditCodeDialog(true);
+                }}>
+                  <EditIcon color="action" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Top Right: Affiliated To */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+              Affiliato a
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {profile.affiliated_to_username ? (
+                <>
+                  <Typography variant="h4" fontWeight="bold">
+                    {profile.affiliated_to_username}
+                  </Typography>
+                  <Tooltip title="Cambia Affiliazione">
+                    <IconButton
+                      onClick={() => {
+                        setNewAffiliateCode("");
+                        setAffiliateError("");
+                        setOpenAffiliateDialog(true);
+                      }}
+                      sx={{
+                        bgcolor: 'rgba(255, 183, 77, 0.1)',
+                        color: '#ffb74d',
+                        '&:hover': { bgcolor: 'rgba(255, 183, 77, 0.2)' }
+                      }}
+                    >
+                      <SyncIcon fontSize="large" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => {
+                    setNewAffiliateCode("");
+                    setAffiliateError("");
+                    setOpenAffiliateDialog(true);
+                  }}
+                  sx={{
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '1rem',
+                    bgcolor: '#ffb74d',
+                    '&:hover': { bgcolor: '#ffa726' },
+                    boxShadow: '0 4px 14px 0 rgba(255, 183, 77, 0.39)',
+                  }}
+                >
+                  Codice PR
+                </Button>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Affiliates List */}
+      <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { sm: 'center' }, gap: 2 }}>
+        <Typography variant="h5" fontWeight="bold">
+          I tuoi Affiliati
         </Typography>
-        <Typography variant="body2" color="text.disabled">
-          Stiamo lavorando per darti la migliore esperienza possibile.
-        </Typography>
+        <TextField
+          placeholder="Cerca per username..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: { xs: '100%', sm: 300 }, bgcolor: 'white' }}
+        />
       </Box>
+
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+        <Table>
+          <TableHead sx={{ bgcolor: '#f8f9fa' }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Utente</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }} align="right">Data Affiliazione</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {affiliatesLoading ? (
+              <TableRow><TableCell colSpan={2} align="center" sx={{ py: 8 }}>Caricamento...</TableCell></TableRow>
+            ) : affiliates.length > 0 ? (
+              affiliates.map((affiliate) => (
+                <TableRow key={affiliate.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                  <TableCell sx={{ py: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar src={affiliate.avatar} sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
+                        {affiliate.username[0].toUpperCase()}
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="600">
+                        {affiliate.username}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right" sx={{ py: 2, color: 'text.secondary' }}>
+                    {affiliate.affiliation_date ? new Date(affiliate.affiliation_date).toLocaleString('it-IT', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '-'}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2} align="center" sx={{ py: 10 }}>
+                  <PeopleIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.5 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    Nessun affiliato trovato.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {totalPages > 1 && (
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(e, v) => setPage(v)}
+            color="primary"
+            sx={{
+              '& .Mui-selected': { bgcolor: '#ffb74d !important', color: 'white' }
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 
@@ -363,6 +621,8 @@ function Profile() {
       <Box
         sx={{
           width: 300,
+          minWidth: 300,
+          flexShrink: 0,
           bgcolor: 'white',
           borderRight: '1px solid',
           borderColor: 'divider',
@@ -370,7 +630,8 @@ function Profile() {
           position: 'sticky',
           top: 0,
           height: 'calc(100vh - 64px)',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          zIndex: 10
         }}
       >
         <Box sx={{ p: 3 }}>
@@ -422,11 +683,83 @@ function Profile() {
           flexGrow: 1,
           p: { xs: 3, md: 8 },
           overflowY: 'auto',
-          maxWidth: '1200px'
         }}
       >
-        {activeSection === "personal_info" ? renderPersonalInfo() : renderAffiliatedUsers()}
+        <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+          {activeSection === "personal_info" ? renderPersonalInfo() : renderAffiliatedUsers()}
+        </Box>
       </Box>
+
+      {/* Dialog for setting/changing affiliation */}
+      <Dialog open={openAffiliateDialog} onClose={() => setOpenAffiliateDialog(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Inserisci Codice PR</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Inserisci il codice affiliato dell'utente a cui desideri affiliarti.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Codice Affiliato"
+            value={newAffiliateCode}
+            onChange={(e) => {
+              setNewAffiliateCode(e.target.value.toUpperCase());
+              setAffiliateError("");
+            }}
+            error={!!affiliateError}
+            helperText={affiliateError}
+            inputProps={{ style: { textTransform: 'uppercase', letterSpacing: 1 } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenAffiliateDialog(false)} sx={{ color: 'text.secondary' }}>Annulla</Button>
+          <Button
+            onClick={handleUpdateAffiliation}
+            variant="contained"
+            disabled={!newAffiliateCode}
+            sx={{ bgcolor: '#ffb74d', '&:hover': { bgcolor: '#ffa726' }, fontWeight: 'bold' }}
+          >
+            Conferma
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog for editing own affiliate code */}
+      <Dialog open={openEditCodeDialog} onClose={() => setOpenEditCodeDialog(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Personalizza il tuo Codice</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Il codice deve essere univoco e può contenere solo lettere e numeri (max 15 caratteri).
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Nuovo Codice"
+            value={editedAffiliateCode}
+            onChange={(e) => {
+              const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+              if (val.length <= 15) {
+                setEditedAffiliateCode(val);
+                setAffiliateError("");
+              }
+            }}
+            error={!!affiliateError}
+            helperText={affiliateError}
+            inputProps={{ style: { textTransform: 'uppercase', letterSpacing: 1 } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenEditCodeDialog(false)} sx={{ color: 'text.secondary' }}>Annulla</Button>
+          <Button
+            onClick={handleUpdateOwnCode}
+            variant="contained"
+            disabled={!editedAffiliateCode || editedAffiliateCode === profile.affiliate_code}
+            sx={{ bgcolor: '#ffb74d', '&:hover': { bgcolor: '#ffa726' }, fontWeight: 'bold' }}
+          >
+            Salva
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={openSnackbar}
