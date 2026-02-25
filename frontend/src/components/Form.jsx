@@ -65,7 +65,7 @@ function Form({ route, method }) {
 
                 {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
 
-                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
+                <Box component="form" onSubmit={handleSubmit} method="POST" sx={{ mt: 3, width: '100%' }}>
                     {method === "register" && (
                         <TextField
                             margin="normal"
@@ -74,7 +74,7 @@ function Form({ route, method }) {
                             id="username"
                             label="Username"
                             name="username"
-                            autoComplete="username"
+                            autoComplete="nickname"
                             autoFocus
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -87,7 +87,8 @@ function Form({ route, method }) {
                         id="email"
                         label="Indirizzo Email"
                         name="email"
-                        autoComplete="email"
+                        type="email"
+                        autoComplete="username email"
                         autoFocus={method === "login"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -100,7 +101,7 @@ function Form({ route, method }) {
                         label="Password"
                         type="password"
                         id="password"
-                        autoComplete="current-password"
+                        autoComplete={method === "login" ? "current-password" : "new-password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
