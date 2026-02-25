@@ -301,7 +301,12 @@ function Profile() {
                 cursor: 'pointer',
                 width: isMobile ? 160 : 220,
                 height: isMobile ? 160 : 220,
+                borderRadius: '50%',
+                border: isMobile ? '4px solid #fff' : '8px solid #fff',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+                overflow: 'hidden',
                 mb: 2,
+                bgcolor: 'primary.light',
               }}
             >
               <Avatar
@@ -309,9 +314,7 @@ function Profile() {
                 sx={{
                   width: '100%',
                   height: '100%',
-                  border: isMobile ? '4px solid #fff' : '8px solid #fff',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
-                  bgcolor: 'primary.light',
+                  bgcolor: 'transparent',
                   fontSize: isMobile ? 60 : 80
                 }}
               >
@@ -325,7 +328,6 @@ function Profile() {
                   width: '100%',
                   height: '100%',
                   bgcolor: 'rgba(0,0,0,0.4)',
-                  borderRadius: '50%',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -498,11 +500,11 @@ function Profile() {
       <Grid container spacing={isMobile ? 2 : 4} sx={{ mb: isMobile ? 4 : 8 }} alignItems="stretch">
         {/* Top Left: My Affiliate Code */}
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
-          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: isMobile ? 'center' : 'left' }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Il tuo Codice Affiliato
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: isMobile ? 1 : 2, flexWrap: 'wrap' }}>
               <Typography variant={isMobile ? "h4" : "h3"} fontWeight="900" sx={{ color: 'primary.main', letterSpacing: isMobile ? 1 : 2 }}>
                 {profile.affiliate_code}
               </Typography>
@@ -530,11 +532,11 @@ function Profile() {
 
         {/* Top Right: Affiliated To */}
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
-          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper elevation={0} sx={{ p: isMobile ? 3 : 4, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'white', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: isMobile ? 'center' : 'left' }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: isMobile ? 1 : 2, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
               Affiliato a
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between' }}>
               {profile.affiliated_to_username ? (
                 <>
                   <Typography variant={isMobile ? "h5" : "h4"} fontWeight="bold">
