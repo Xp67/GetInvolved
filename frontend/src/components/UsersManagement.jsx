@@ -154,10 +154,7 @@ function UsersManagement({ userPermissions = [] }) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Gestione Utenti
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
         <TextField
           placeholder="Cerca utenti..."
           value={search}

@@ -130,10 +130,7 @@ function RolesManagement({ userPermissions = [] }) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Gestione Ruoli e Permessi
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
         {hasPermission('roles.create') && (
           <Button variant="contained" color="primary" onClick={() => handleOpen()}>
             Crea Ruolo
