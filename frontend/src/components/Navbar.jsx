@@ -57,7 +57,7 @@ function Navbar() {
     { label: 'Home', path: '/' },
     ...(isLoggedIn ? [
       { label: 'Dashboard', path: '/dashboard' },
-      { label: 'Profilo', path: '/profile' },
+      ...(isMobile ? [] : [{ label: 'Profilo', path: '/profile' }]),
       { label: 'Esci', path: '/logout', color: 'error.main' }
     ] : [
       { label: 'Inizia ora', path: '/login' }
@@ -144,7 +144,10 @@ function Navbar() {
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               {isLoggedIn && (
-                <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box
+                  onClick={() => handleNavigate('/profile')}
+                  sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                >
                   <Avatar sx={{ width: 64, height: 64, mb: 1, bgcolor: 'primary.main', fontSize: '2rem' }}>
                     {username ? username[0].toUpperCase() : <AccountCircle />}
                   </Avatar>

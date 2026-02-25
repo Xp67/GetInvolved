@@ -283,12 +283,12 @@ function Profile() {
   );
 
   const renderPersonalInfo = () => (
-    <Box component="form" onSubmit={handleUpdate} noValidate sx={{ width: '100%' }}>
+    <Box component="form" onSubmit={handleUpdate} noValidate sx={{ width: '100%', textAlign: isMobile ? 'center' : 'left' }}>
       <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold" sx={{ mb: isMobile ? 4 : 6, color: 'text.primary' }}>
         Informazioni Personali
       </Typography>
 
-      <Grid container spacing={isMobile ? 4 : 6}>
+      <Grid container spacing={isMobile ? 4 : 6} justifyContent={isMobile ? "center" : "flex-start"}>
         {/* Avatar Section */}
         <Grid item xs={12} lg={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Tooltip title="Clicca per cambiare immagine" placement="top">
