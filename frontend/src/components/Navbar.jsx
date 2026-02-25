@@ -57,25 +57,63 @@ function Navbar() {
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Button color="inherit" onClick={() => navigate('/')}>Home</Button>
+            <Button
+              color="inherit"
+              onClick={() => navigate('/')}
+              sx={{ display: { xs: 'none', sm: 'block' } }}
+            >
+              Home
+            </Button>
 
             {!isLoggedIn ? (
               <>
-                <Button color="inherit" onClick={() => navigate('/login')} sx={{ textTransform: 'none' }}>ACCEDI</Button>
+                <Button
+                  color="inherit"
+                  onClick={() => navigate('/login')}
+                  sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                >
+                  ACCEDI
+                </Button>
               </>
             ) : (
               <>
-                <Button color="inherit" onClick={() => navigate('/dashboard')}>Dashboard</Button>
+                <Button
+                  color="inherit"
+                  onClick={() => navigate('/dashboard')}
+                  sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}
+                >
+                  Dashboard
+                </Button>
 
                 <Button
                   onClick={() => navigate('/profile')}
                   color="inherit"
-                  sx={{ textTransform: 'none', display: 'flex', alignItems: 'center', ml: 2, px: 1 }}
+                  sx={{
+                    textTransform: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    ml: { xs: 1, sm: 2 },
+                    px: 1
+                  }}
                 >
-                  <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main', fontSize: '1rem' }}>
+                  <Avatar
+                    sx={{
+                      width: { xs: 24, sm: 32 },
+                      height: { xs: 24, sm: 32 },
+                      mr: { xs: 0.5, sm: 1 },
+                      bgcolor: 'primary.main',
+                      fontSize: { xs: '0.8rem', sm: '1rem' }
+                    }}
+                  >
                     {username ? username[0].toUpperCase() : <AccountCircle />}
                   </Avatar>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      fontWeight: 500,
+                      display: { xs: 'none', md: 'block' }
+                    }}
+                  >
                     {username}
                   </Typography>
                 </Button>

@@ -57,24 +57,38 @@ function Form({ route, method }) {
     };
 
     return (
-        <Container maxWidth="xs" sx={{ mt: 8 }}>
-            <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Container maxWidth="xs" sx={{ mt: { xs: 4, sm: 8 } }}>
+            <Paper
+                elevation={3}
+                sx={{
+                    p: { xs: 3, sm: 4 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                }}
+            >
                 <Typography component="h1" variant="h5" fontWeight="bold">
                     {name}
                 </Typography>
 
                 {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
 
-                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
+                <Box
+                    component="form"
+                    onSubmit={handleSubmit}
+                    autoComplete="on"
+                    action={route}
+                    sx={{ mt: 3, width: "100%" }}
+                >
                     {method === "register" && (
                         <TextField
                             margin="normal"
                             required
                             fullWidth
-                            id="username"
+                            id="display-name"
                             label="Username"
-                            name="username"
-                            autoComplete="username"
+                            name="displayName"
+                            autoComplete="off"
                             autoFocus
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -84,10 +98,11 @@ function Form({ route, method }) {
                         margin="normal"
                         required
                         fullWidth
-                        id="email"
+                        id="auth-username"
                         label="Indirizzo Email"
-                        name="email"
-                        autoComplete="email"
+                        name="username"
+                        type="email"
+                        autoComplete="username"
                         autoFocus={method === "login"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -99,8 +114,8 @@ function Form({ route, method }) {
                         name="password"
                         label="Password"
                         type="password"
-                        id="password"
-                        autoComplete="current-password"
+                        id="auth-password"
+                        autoComplete={method === "login" ? "current-password" : "new-password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
