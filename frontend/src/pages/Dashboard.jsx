@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Event from "../components/Event";
 import Sidebar from "../components/Sidebar";
@@ -29,6 +30,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 
 function Dashboard() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState('eventi');
@@ -42,9 +44,7 @@ function Dashboard() {
   const [location, setLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [open, setOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [viewingEvent, setViewingEvent] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
@@ -99,8 +99,7 @@ function Dashboard() {
   };
 
   const handleViewOpen = (event) => {
-    setViewingEvent(event);
-    setViewDialogOpen(true);
+    navigate(`/dashboard/eventi/${event.id}`);
   };
 
   const handleClose = () => {
@@ -112,10 +111,6 @@ function Dashboard() {
     setEventDate("");
   };
 
-  const handleViewClose = () => {
-    setViewDialogOpen(false);
-    setViewingEvent(null);
-  };
 
   const getEvents = () => {
     api
@@ -419,48 +414,6 @@ function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Visualizzazione Evento */}
-      <Dialog open={viewDialogOpen} onClose={handleViewClose} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Dettagli Evento
-          <IconButton onClick={handleViewClose} sx={{ color: (theme) => theme.palette.grey[500] }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {viewingEvent && (
-            <Box>
-              <Typography variant="h5" gutterBottom color="primary" fontWeight="bold">
-                {viewingEvent.title}
-              </Typography>
-              <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>
-                {viewingEvent.description}
-              </Typography>
-              <Divider sx={{ my: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Luogo</Typography>
-                  <Typography variant="body2" fontWeight="medium">{viewingEvent.location}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Data e Ora Evento</Typography>
-                  <Typography variant="body2" fontWeight="medium">
-                    {viewingEvent.event_date
-                      ? new Date(viewingEvent.event_date).toLocaleString("it-IT", {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : "Non impostata"}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Snackbar
         open={snackbarOpen}

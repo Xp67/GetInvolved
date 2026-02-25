@@ -1,15 +1,18 @@
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
-from rest_framework import generics, filters
+from rest_framework import generics, filters, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from .serializer import (
     UserSerializer, EventSerializer, RoleSerializer,
     PermissionCategorySerializer, AppPermissionSerializer,
-    RegisterSerializer, AffiliateSerializer
+    RegisterSerializer, AffiliateSerializer, TicketCategorySerializer,
+    TicketSerializer
 )
 
 User = get_user_model()
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Event, Role, AppPermission, PermissionCategory
+from .models import Event, Role, AppPermission, PermissionCategory, Ticket, TicketCategory
 from .permissions import HasAppPermission, EventPermission
 
 
@@ -53,6 +56,11 @@ class EventUpdate(generics.UpdateAPIView):
         if user.has_app_permission('events.edit_own'):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
+
+class EventDetail(generics.RetrieveAPIView):
+    serializer_class = EventSerializer
+    permission_classes = [EventPermission]
+    queryset = Event.objects.all()
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -135,3 +143,96 @@ class AffiliateList(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.filter(affiliated_to=self.request.user).order_by('-affiliation_date')
+
+class TicketCategoryCreateView(generics.CreateAPIView):
+    serializer_class = TicketCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        event_id = self.request.data.get('event')
+        try:
+            event = Event.objects.get(id=event_id)
+            if event.organizer != self.request.user and not self.request.user.is_super_admin:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Solo l'organizzatore può aggiungere categorie di biglietti.")
+            serializer.save(event=event)
+        except Event.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Evento non trovato.")
+
+class TicketPurchaseView(generics.CreateAPIView):
+    serializer_class = TicketSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        category_id = self.request.data.get('category')
+        try:
+            category = TicketCategory.objects.get(id=category_id)
+            if category.remaining_quantity <= 0:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("I biglietti per questa categoria sono esauriti.")
+            serializer.save(owner=self.request.user, category=category)
+        except TicketCategory.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Categoria biglietto non trovata.")
+
+class UserTicketsListView(generics.ListAPIView):
+    serializer_class = TicketSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Ticket.objects.filter(owner=self.request.user).order_by('-purchase_date')
+
+class EventTicketsListView(generics.ListAPIView):
+    serializer_class = TicketSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        event_id = self.kwargs.get('event_id')
+        try:
+            event = Event.objects.get(id=event_id)
+            if event.organizer != self.request.user and not self.request.user.is_super_admin:
+                return Ticket.objects.none()
+            return Ticket.objects.filter(category__event=event).order_by('-purchase_date')
+        except Event.DoesNotExist:
+            return Ticket.objects.none()
+
+class TicketValidationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        ticket_code = request.data.get('ticket_code')
+        ticket_id = request.data.get('ticket_id')
+        from django.utils import timezone
+
+        try:
+            if ticket_code:
+                ticket = Ticket.objects.get(ticket_code=ticket_code)
+            elif ticket_id:
+                ticket = Ticket.objects.get(id=ticket_id)
+            else:
+                return Response({"error": "Identificativo biglietto mancante"}, status=status.HTTP_400_BAD_REQUEST)
+
+            event = ticket.category.event
+            if event.organizer != request.user and not request.user.is_super_admin:
+                return Response({"error": "Permesso negato"}, status=status.HTTP_403_FORBIDDEN)
+
+            if ticket.is_checked_in:
+                return Response({
+                    "error": "Biglietto già validato",
+                    "checked_in_at": ticket.checked_in_at,
+                    "owner_name": f"{ticket.owner.first_name} {ticket.owner.last_name}".strip() or ticket.owner.username,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            ticket.is_checked_in = True
+            ticket.checked_in_at = timezone.now()
+            ticket.save()
+
+            return Response({
+                "message": "Biglietto validato con successo",
+                "owner_name": f"{ticket.owner.first_name} {ticket.owner.last_name}".strip() or ticket.owner.username,
+                "category": ticket.category.name
+            }, status=status.HTTP_200_OK)
+
+        except Ticket.DoesNotExist:
+            return Response({"error": "Biglietto non trovato"}, status=status.HTTP_404_NOT_FOUND)
