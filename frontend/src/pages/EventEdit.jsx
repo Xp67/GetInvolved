@@ -296,48 +296,67 @@ function EventEdit() {
         <Grid item xs={12} md={9}>
           <Paper sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2, minHeight: 400 }}>
             {activeTab === 0 && (
-              <Box component="form" onSubmit={handleEventSubmit}>
+              <Box component="form" onSubmit={handleEventSubmit} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>Informazioni Generali</Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <TextField required fullWidth label="Titolo Evento" value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Grid container spacing={4} sx={{ flexGrow: 1 }}>
+                  {/* Left Column: Title and Description */}
+                  <Grid item xs={12} md={7}>
+                    <Stack spacing={3}>
+                      <TextField required fullWidth label="Titolo Evento" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      <TextField required fullWidth label="Descrizione" multiline rows={6} value={description} onChange={(e) => setDescription(e.target.value)} />
+                    </Stack>
                   </Grid>
-                  <Grid item xs={12}>
-                    <TextField required fullWidth label="Descrizione" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      value={location}
-                      onChange={(event, newValue) => {
-                        setLocation(newValue || "");
-                      }}
-                      inputValue={inputValue}
-                      onInputChange={(event, newInputValue) => {
-                        setInputValue(newInputValue);
-                      }}
-                      options={options}
-                      noOptionsText="Nessun luogo trovato"
-                      loading={inputValue.length > 0 && options.length === 0}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Luogo (Seleziona dai suggerimenti)"
-                          required
-                          fullWidth
-                          placeholder="Inizia a scrivere per vedere i suggerimenti..."
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField required fullWidth label="Data e Ora" type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Button type="submit" variant="contained" disabled={saving} sx={{ mt: 2, px: 4, textTransform: 'none' }}>
-                      {saving ? "Salvataggio..." : "Salva Modifiche"}
-                    </Button>
+
+                  {/* Right Column: Location and Date/Time */}
+                  <Grid item xs={12} md={5}>
+                    <Stack spacing={3} alignItems="flex-start">
+                      <Autocomplete
+                        sx={{
+                          width: 'fit-content',
+                          maxWidth: { md: '30ch', xs: '100%' },
+                          flexGrow: 0
+                        }}
+                        fullWidth={false}
+                        value={location}
+                        onChange={(event, newValue) => {
+                          setLocation(newValue || "");
+                        }}
+                        inputValue={inputValue}
+                        onInputChange={(event, newInputValue) => {
+                          setInputValue(newInputValue);
+                        }}
+                        options={options}
+                        noOptionsText="Nessun luogo trovato"
+                        loading={inputValue.length > 0 && options.length === 0}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Luogo (Seleziona dai suggerimenti)"
+                            required
+                            fullWidth
+                            placeholder="Inizia a scrivere per vedere i suggerimenti..."
+                          />
+                        )}
+                      />
+                      <TextField
+                        required
+                        fullWidth
+                        label="Data e Ora"
+                        type="datetime-local"
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Stack>
                   </Grid>
                 </Grid>
+
+                {/* Save Button: Bottom Left */}
+                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
+                  <Button type="submit" variant="contained" disabled={saving} sx={{ px: 4, textTransform: 'none' }}>
+                    {saving ? "Salvataggio..." : "Salva Modifiche"}
+                  </Button>
+                </Box>
               </Box>
             )}
 
