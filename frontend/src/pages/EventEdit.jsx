@@ -234,7 +234,7 @@ function EventEdit() {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-        <IconButton onClick={() => navigate(`/dashboard/eventi/${id}`)} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
+        <IconButton onClick={() => navigate(`/dashboard`)} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" fontWeight="bold">Gestione Evento</Typography>
