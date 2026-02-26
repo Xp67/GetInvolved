@@ -160,6 +160,33 @@ class TicketCategoryCreateView(generics.CreateAPIView):
             from rest_framework.exceptions import ValidationError
             raise ValidationError("Evento non trovato.")
 
+class TicketCategoryUpdateView(generics.UpdateAPIView):
+    queryset = TicketCategory.objects.all()
+    serializer_class = TicketCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_update(self, serializer):
+        category = self.get_object()
+        if category.event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può modificare le categorie.")
+        serializer.save()
+
+class TicketCategoryDeleteView(generics.DestroyAPIView):
+    queryset = TicketCategory.objects.all()
+    serializer_class = TicketCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_destroy(self, instance):
+        if instance.event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può eliminare le categorie.")
+        # Optional: check if tickets have already been sold
+        if instance.tickets.count() > 0:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Impossibile eliminare una categoria che ha già venduto biglietti.")
+        instance.delete()
+
 class TicketPurchaseView(generics.CreateAPIView):
     serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]

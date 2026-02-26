@@ -38,9 +38,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import QrCodeIcon from '@mui/icons-material/QrCode';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import AddIcon from '@mui/icons-material/Add';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { hasPermission } from "../utils/permissionUtils";
 
@@ -60,7 +58,6 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 import { QRCodeSVG } from 'qrcode.react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 
 // Helper component to update map center
 function ChangeView({ center }) {
@@ -77,23 +74,11 @@ function EventDetail() {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [coords, setCoords] = useState([41.9028, 12.4964]); // Rome default
-  const [tabValue, setTabValue] = useState(0);
 
   // Ticketing state
   const [myTickets, setMyTickets] = useState([]);
-  const [eventTickets, setEventTickets] = useState([]); // For organizer
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-
-  // New Category Form
-  const [catName, setCatName] = useState('');
-  const [catPrice, setCatPrice] = useState('');
-  const [catQty, setCatQty] = useState('');
-
-  // Scanner state
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const scannerRef = useRef(null);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -105,9 +90,6 @@ function EventDetail() {
   useEffect(() => {
     if (event && user) {
         fetchMyTickets();
-        if (event.organizer === user.id || user.is_super_admin || hasPermission(user, 'tickets.manage')) {
-            fetchEventTickets();
-        }
     }
   }, [event, user]);
 
@@ -150,14 +132,6 @@ function EventDetail() {
     }
   };
 
-  const fetchEventTickets = async () => {
-    try {
-        const res = await api.get(`/api/tickets/event/${id}/`);
-        setEventTickets(res.data);
-    } catch (err) {
-        console.error("Error fetching event tickets", err);
-    }
-  };
 
   const geocodeAddress = async (address) => {
     try {
@@ -186,61 +160,11 @@ function EventDetail() {
     }
   };
 
-  const handleAddCategory = async () => {
-    try {
-      await api.post('/api/tickets/categories/', {
-        event: id,
-        name: catName,
-        price: catPrice,
-        total_quantity: catQty
-      });
-      setSnackbar({ open: true, message: 'Categoria aggiunta con successo!', severity: 'success' });
-      setCategoryDialogOpen(false);
-      setCatName(''); setCatPrice(''); setCatQty('');
-      fetchData();
-    } catch (err) {
-      setSnackbar({ open: true, message: 'Errore nella creazione categoria', severity: 'error' });
-    }
-  };
-
-  const validateTicket = async (codeOrId, isCode = true) => {
-    try {
-      const payload = isCode ? { ticket_code: codeOrId } : { ticket_id: codeOrId };
-      const res = await api.post('/api/tickets/validate/', payload);
-      setSnackbar({ open: true, message: res.data.message + ' per ' + res.data.owner_name, severity: 'success' });
-      fetchEventTickets();
-      if (scannerOpen) setScannerOpen(false);
-    } catch (err) {
-      setSnackbar({ open: true, message: err.response?.data?.error || 'Errore nella validazione', severity: 'error' });
-    }
-  };
-
-  const startScanner = () => {
-    setScannerOpen(true);
-    setTimeout(() => {
-        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        scanner.render((decodedText) => {
-            scanner.clear();
-            validateTicket(decodedText, true);
-        }, (error) => {
-            // ignore
-        });
-        scannerRef.current = scanner;
-    }, 100);
-  };
-
-  const stopScanner = () => {
-    if (scannerRef.current) {
-        scannerRef.current.clear();
-    }
-    setScannerOpen(false);
-  };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
   if (error || !event) return <Container sx={{ mt: 4 }}><Alert severity="error">{error || "Evento non trovato"}</Alert><Button onClick={handleBack} sx={{ mt: 2 }}>Torna indietro</Button></Container>;
 
   const isOrganizer = event.organizer === user?.id || user?.is_super_admin;
-  const canManage = isOrganizer || hasPermission(user, 'tickets.manage');
   const canPurchase = hasPermission(user, 'tickets.purchase') || user?.is_super_admin || isOrganizer; // Let's allow organizer to buy too
 
   const myTicketsForThisEvent = Array.isArray(myTickets) ? myTickets.filter(t => t.event_id === parseInt(id)) : [];
@@ -294,146 +218,77 @@ function EventDetail() {
         {/* Destra: Ticketing */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 0, borderRadius: 2, overflow: 'hidden' }}>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="fullWidth">
-                <Tab label="Biglietti" />
-                {canManage && <Tab label="Gestione" />}
-              </Tabs>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'primary.main', color: 'white', p: 2 }}>
+                <Typography variant="h6" fontWeight="bold">Biglietti</Typography>
             </Box>
 
             <Box sx={{ p: 2 }}>
-              {tabValue === 0 && (
-                <Box>
-                  {/* Biglietti disponibili per l'acquisto */}
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mt: 1 }}>
-                    Scegli il tuo biglietto
+              {/* Biglietti disponibili per l'acquisto */}
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mt: 1 }}>
+                Scegli il tuo biglietto
+              </Typography>
+              <List>
+                {event.ticket_categories.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">Nessun biglietto disponibile al momento.</Typography>
+                )}
+                {event.ticket_categories.map((cat) => (
+                  <Card key={cat.id} sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }} elevation={0}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontSize: '1rem' }}>{cat.name}</Typography>
+                          <Typography variant="h5" color="primary" fontWeight="bold">
+                            {cat.price == 0 ? "GRATIS" : `${parseFloat(cat.price).toFixed(2)}€`}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {cat.remaining_quantity} rimasti su {cat.total_quantity}
+                          </Typography>
+                        </Box>
+                        {canPurchase && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            disabled={cat.remaining_quantity <= 0}
+                            startIcon={<ShoppingCartIcon />}
+                            onClick={() => { setSelectedCategory(cat); setBuyDialogOpen(true); }}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Acquista
+                          </Button>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </List>
+
+              {/* I miei biglietti */}
+              {myTicketsForThisEvent.length > 0 && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    I Tuoi Biglietti
                   </Typography>
-                  <List>
-                    {event.ticket_categories.length === 0 && (
-                        <Typography variant="body2" color="text.secondary">Nessun biglietto disponibile al momento.</Typography>
-                    )}
-                    {event.ticket_categories.map((cat) => (
-                      <Card key={cat.id} sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }} elevation={0}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontSize: '1rem' }}>{cat.name}</Typography>
-                              <Typography variant="h5" color="primary" fontWeight="bold">
-                                {cat.price == 0 ? "GRATIS" : `${parseFloat(cat.price).toFixed(2)}€`}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {cat.remaining_quantity} rimasti su {cat.total_quantity}
-                              </Typography>
-                            </Box>
-                            {canPurchase && (
-                                <Button
-                                    variant="contained"
-                                    size="small"
-                                    disabled={cat.remaining_quantity <= 0}
-                                    startIcon={<ShoppingCartIcon />}
-                                    onClick={() => { setSelectedCategory(cat); setBuyDialogOpen(true); }}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    Acquista
-                                </Button>
-                            )}
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </List>
-
-                  {/* I miei biglietti */}
-                  {myTicketsForThisEvent.length > 0 && (
-                    <>
-                      <Divider sx={{ my: 3 }} />
-                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                        I Tuoi Biglietti
-                      </Typography>
-                      {myTicketsForThisEvent.map(ticket => (
-                        <Paper key={ticket.id} sx={{ p: 2, mb: 2, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="body2" fontWeight="bold">{ticket.category_name}</Typography>
-                                    <Typography variant="caption" display="block">Codice: {ticket.ticket_code.substring(0,8)}...</Typography>
-                                    {ticket.is_checked_in && (
-                                        <Chip size="small" label="Validato" color="success" sx={{ mt: 1, bgcolor: 'white', color: 'success.main' }} icon={<CheckCircleIcon />} />
-                                    )}
-                                </Box>
-                                <IconButton
-                                    onClick={() => { setSelectedCategory({ ticket }); }} // Temporary hack to show QR
-                                    sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#f5f5f5' } }}
-                                >
-                                    <QrCodeIcon color="primary" />
-                                </IconButton>
-                            </Box>
-                        </Paper>
-                      ))}
-                    </>
-                  )}
-                </Box>
-              )}
-
-              {tabValue === 1 && canManage && (
-                <Box>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => setCategoryDialogOpen(true)}
-                    sx={{
-                        mb: 2,
-                        textTransform: 'none',
-                        color: '#ffb74d',
-                        borderColor: '#ffb74d',
-                        '&:hover': { borderColor: '#ffa726', bgcolor: 'rgba(255, 183, 77, 0.04)' }
-                    }}
-                  >
-                    Aggiungi Categoria
-                  </Button>
-
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<QrCodeScannerIcon />}
-                    onClick={startScanner}
-                    sx={{ mb: 3, textTransform: 'none' }}
-                  >
-                    Scansiona QR Code
-                  </Button>
-
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                    Partecipanti ({eventTickets.length})
-                  </Typography>
-                  <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-                    {eventTickets.length === 0 && <Typography variant="body2" color="text.secondary">Nessun biglietto venduto.</Typography>}
-                    {eventTickets.map(ticket => (
-                        <ListItem
-                            key={ticket.id}
-                            divider
-                            secondaryAction={
-                                !ticket.is_checked_in ? (
-                                    <Tooltip title="Segna come Arrivato">
-                                        <IconButton edge="end" color="primary" onClick={() => validateTicket(ticket.id, false)}>
-                                            <CheckCircleIcon />
-                                        </IconButton>
-                                    </Tooltip>
-                                ) : (
-                                    <Typography variant="caption" color="success.main">Arrivato</Typography>
-                                )
-                            }
+                  {myTicketsForThisEvent.map(ticket => (
+                    <Paper key={ticket.id} sx={{ p: 2, mb: 2, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">{ticket.category_name}</Typography>
+                          <Typography variant="caption" display="block">Codice: {ticket.ticket_code.substring(0,8)}...</Typography>
+                          {ticket.is_checked_in && (
+                            <Chip size="small" label="Validato" color="success" sx={{ mt: 1, bgcolor: 'white', color: 'success.main' }} icon={<CheckCircleIcon />} />
+                          )}
+                        </Box>
+                        <IconButton
+                          onClick={() => { setSelectedCategory({ ticket }); }} // Temporary hack to show QR
+                          sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#f5f5f5' } }}
                         >
-                            <ListItemText
-                                primary={ticket.owner_name}
-                                secondary={`${ticket.category_name} - ${ticket.owner_email}`}
-                                primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
-                                secondaryTypographyProps={{ variant: 'caption' }}
-                            />
-                        </ListItem>
-                    ))}
-                  </List>
-                </Box>
+                          <QrCodeIcon color="primary" />
+                        </IconButton>
+                      </Box>
+                    </Paper>
+                  ))}
+                </>
               )}
             </Box>
           </Paper>
@@ -460,50 +315,6 @@ function EventDetail() {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog Nuova Categoria */}
-      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)}>
-        <DialogTitle>Nuova Categoria Biglietto</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Nome Categoria (es. Standard, VIP)"
-            margin="normal"
-            value={catName}
-            onChange={(e) => setCatName(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Prezzo (€)"
-            type="number"
-            margin="normal"
-            value={catPrice}
-            onChange={(e) => setCatPrice(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Quantità Totale"
-            type="number"
-            margin="normal"
-            value={catQty}
-            onChange={(e) => setCatQty(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryDialogOpen(false)} sx={{ textTransform: 'none' }}>Annulla</Button>
-          <Button
-            onClick={handleAddCategory}
-            variant="contained"
-            sx={{
-                textTransform: 'none',
-                bgcolor: '#ffb74d',
-                '&:hover': { bgcolor: '#ffa726' }
-            }}
-          >
-            Crea
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Dialog QR Code Personal (Visualizzazione) */}
       <Dialog open={!!selectedCategory?.ticket} onClose={() => setSelectedCategory(null)}>
         <DialogTitle sx={{ textAlign: 'center' }}>Il Tuo Biglietto</DialogTitle>
@@ -522,17 +333,6 @@ function EventDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Scanner */}
-      <Dialog open={scannerOpen} onClose={stopScanner} fullWidth maxWidth="xs">
-        <DialogTitle>Scansiona Biglietto</DialogTitle>
-        <DialogContent>
-          <Box id="reader" sx={{ width: '100%' }}></Box>
-          <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>Inquadra il QR Code del partecipante</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={stopScanner}>Chiudi</Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar
         open={snackbar.open}
