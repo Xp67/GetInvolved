@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Event, Role, AppPermission, PermissionCategory
+from .models import Event, Role, AppPermission, PermissionCategory, Ticket, TicketCategory
 
 User = get_user_model()
 
@@ -151,13 +151,39 @@ class AffiliateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'avatar', 'affiliation_date']
     
+class TicketCategorySerializer(serializers.ModelSerializer):
+    remaining_quantity = serializers.ReadOnlyField()
+    sold_count = serializers.ReadOnlyField()
+
+    class Meta:
+        model = TicketCategory
+        fields = ['id', 'name', 'price', 'total_quantity', 'remaining_quantity', 'sold_count']
+
+class TicketSerializer(serializers.ModelSerializer):
+    owner_email = serializers.EmailField(source='owner.email', read_only=True)
+    owner_name = serializers.SerializerMethodField()
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    event_id = serializers.IntegerField(source='category.event.id', read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'category', 'category_name', 'event_id', 'owner', 'owner_email', 'owner_name', 'ticket_code', 'is_checked_in', 'checked_in_at', 'purchase_date']
+        read_only_fields = ['owner', 'ticket_code', 'is_checked_in', 'checked_in_at', 'purchase_date']
+
+    def get_owner_name(self, obj):
+        return f"{obj.owner.first_name} {obj.owner.last_name}".strip() or obj.owner.username
+
 class EventSerializer(serializers.ModelSerializer):
-    
+    organizer_name = serializers.SerializerMethodField()
+    ticket_categories = TicketCategorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Event
-        fields = ['id', 'title', 'description', 'location', 'event_date', 'organizer', 'created_at']
+        fields = ['id', 'title', 'description', 'location', 'event_date', 'organizer', 'organizer_name', 'created_at', 'ticket_categories']
         read_only_fields = ['organizer', 'created_at']
+
+    def get_organizer_name(self, obj):
+        return f"{obj.organizer.first_name} {obj.organizer.last_name}".strip() or obj.organizer.username
 
     def create(self, validated_data):
         event = Event.objects.create(**validated_data)

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Event from "../components/Event";
 import Sidebar from "../components/Sidebar";
@@ -22,13 +23,15 @@ import {
   Alert,
   useTheme,
   useMediaQuery,
-  Drawer
+  Drawer,
+  Autocomplete
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
 
 function Dashboard() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState('eventi');
@@ -42,10 +45,39 @@ function Dashboard() {
   const [location, setLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [open, setOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-  const [viewingEvent, setViewingEvent] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  // Location suggestions for creation dialog
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [locationInputValue, setLocationInputValue] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (locationInputValue === '') {
+      setLocationOptions([]);
+      return undefined;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInputValue)}&addressdetails=1&limit=8`);
+        const data = await response.json();
+        if (active) {
+          const uniqueResults = data.map(item => item.display_name);
+          setLocationOptions([...new Set(uniqueResults)]);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions", error);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [locationInputValue]);
 
   useEffect(() => {
     fetchUser();
@@ -73,10 +105,10 @@ function Dashboard() {
   };
 
   const handleOpen = () => {
-    setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
+    setLocationInputValue("");
     setEventDate("");
     setOpen(true);
   };
@@ -90,32 +122,21 @@ function Dashboard() {
   };
 
   const handleEditOpen = (event) => {
-    setEditingEvent(event);
-    setTitle(event.title);
-    setDescription(event.description);
-    setLocation(event.location);
-    setEventDate(formatDateTimeForInput(event.event_date));
-    setOpen(true);
+    navigate(`/dashboard/eventi/${event.id}/edit`);
   };
 
   const handleViewOpen = (event) => {
-    setViewingEvent(event);
-    setViewDialogOpen(true);
+    navigate(`/dashboard/eventi/${event.id}`);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
     setEventDate("");
   };
 
-  const handleViewClose = () => {
-    setViewDialogOpen(false);
-    setViewingEvent(null);
-  };
 
   const getEvents = () => {
     api
@@ -141,11 +162,7 @@ function Dashboard() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (editingEvent) {
-      updateEvent();
-    } else {
-      createEvent();
-    }
+    createEvent();
   };
 
   const createEvent = () => {
@@ -167,25 +184,6 @@ function Dashboard() {
       .catch((error) => alert(error));
   };
 
-  const updateEvent = () => {
-    const eventData = {
-      title,
-      description,
-      location,
-      event_date: eventDate ? new Date(eventDate).toISOString() : null,
-    };
-    api
-      .patch(`/api/event/update/${editingEvent.id}/`, eventData)
-      .then((res) => {
-        if (res.status === 200) {
-            handleClose();
-            getEvents();
-            setSnackbarOpen(true);
-        }
-        else alert("Error updating event");
-      })
-      .catch((error) => alert(error));
-  };
 
   const renderSection = () => {
     switch (currentSection) {
@@ -336,10 +334,10 @@ function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Dialog Creazione/Modifica Evento */}
+      {/* Dialog Creazione Evento */}
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {editingEvent ? "Modifica Evento" : "Crea Nuovo Evento"}
+          Crea Nuovo Evento
           <IconButton
             aria-label="close"
             onClick={handleClose}
@@ -375,15 +373,28 @@ function Dashboard() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="location"
-              label="Luogo"
-              name="location"
+            <Autocomplete
+              sx={{ mt: 2, mb: 1 }}
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(event, newValue) => {
+                setLocation(newValue || "");
+              }}
+              inputValue={locationInputValue}
+              onInputChange={(event, newInputValue) => {
+                setLocationInputValue(newInputValue);
+              }}
+              options={locationOptions}
+              noOptionsText="Nessun luogo trovato"
+              loading={locationInputValue.length > 0 && locationOptions.length === 0}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Luogo (Seleziona dai suggerimenti)"
+                  required
+                  fullWidth
+                  placeholder="Inizia a scrivere per vedere i suggerimenti..."
+                />
+              )}
             />
             <TextField
               margin="normal"
@@ -406,61 +417,19 @@ function Dashboard() {
               sx={{
                 mt: 3,
                 mb: 2,
-                backgroundColor: editingEvent ? '#ffb74d' : 'primary.main',
+                backgroundColor: 'primary.main',
                 '&:hover': {
-                  backgroundColor: editingEvent ? '#ffa726' : 'primary.dark',
+                  backgroundColor: 'primary.dark',
                 },
                 textTransform: 'none'
               }}
             >
-              {editingEvent ? "Salva Modifiche" : "Crea Evento"}
+              Crea Evento
             </Button>
           </Box>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Visualizzazione Evento */}
-      <Dialog open={viewDialogOpen} onClose={handleViewClose} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Dettagli Evento
-          <IconButton onClick={handleViewClose} sx={{ color: (theme) => theme.palette.grey[500] }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {viewingEvent && (
-            <Box>
-              <Typography variant="h5" gutterBottom color="primary" fontWeight="bold">
-                {viewingEvent.title}
-              </Typography>
-              <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>
-                {viewingEvent.description}
-              </Typography>
-              <Divider sx={{ my: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Luogo</Typography>
-                  <Typography variant="body2" fontWeight="medium">{viewingEvent.location}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Data e Ora Evento</Typography>
-                  <Typography variant="body2" fontWeight="medium">
-                    {viewingEvent.event_date
-                      ? new Date(viewingEvent.event_date).toLocaleString("it-IT", {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : "Non impostata"}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Snackbar
         open={snackbarOpen}

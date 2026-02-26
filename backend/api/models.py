@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 import string
 import secrets
+import uuid
 
 # Create your models here.
 
@@ -97,3 +98,31 @@ class Event(models.Model):
 
     def __str__(self):
         return self.title
+
+class TicketCategory(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='ticket_categories')
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_quantity = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.name} - {self.event.title}"
+
+    @property
+    def sold_count(self):
+        return self.tickets.count()
+
+    @property
+    def remaining_quantity(self):
+        return max(0, self.total_quantity - self.sold_count)
+
+class Ticket(models.Model):
+    category = models.ForeignKey(TicketCategory, on_delete=models.CASCADE, related_name='tickets')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tickets')
+    ticket_code = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    is_checked_in = models.BooleanField(default=False)
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    purchase_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Ticket {self.ticket_code} - {self.owner.email}"
