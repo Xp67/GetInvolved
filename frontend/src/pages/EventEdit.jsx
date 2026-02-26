@@ -293,10 +293,10 @@ function EventEdit() {
         </Grid>
 
         {/* Main Content */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={9} >
           <Paper sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2, minHeight: 400 }}>
             {activeTab === 0 && (
-              <Box component="form" onSubmit={handleEventSubmit} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box component="form" onSubmit={handleEventSubmit} sx={{ height: '100%', justifyContent: 'stretch', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>Informazioni Generali</Typography>
                 <Grid container spacing={4} sx={{ flexGrow: 1 }}>
                   {/* Left Column: Title and Description */}
@@ -314,6 +314,7 @@ function EventEdit() {
                         sx={{
                           width: 'fit-content',
                           maxWidth: { md: '30ch', xs: '100%' },
+                          minWidth: '100%',
                           flexGrow: 0
                         }}
                         fullWidth={false}
