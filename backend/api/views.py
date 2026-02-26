@@ -152,9 +152,9 @@ class TicketCategoryCreateView(generics.CreateAPIView):
         event_id = self.request.data.get('event')
         try:
             event = Event.objects.get(id=event_id)
-            if event.organizer != self.request.user and not self.request.user.is_super_admin:
+            if event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
                 from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("Solo l'organizzatore può aggiungere categorie di biglietti.")
+                raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può aggiungere categorie di biglietti.")
             serializer.save(event=event)
         except Event.DoesNotExist:
             from rest_framework.exceptions import ValidationError
@@ -191,7 +191,7 @@ class EventTicketsListView(generics.ListAPIView):
         event_id = self.kwargs.get('event_id')
         try:
             event = Event.objects.get(id=event_id)
-            if event.organizer != self.request.user and not self.request.user.is_super_admin:
+            if event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
                 return Ticket.objects.none()
             return Ticket.objects.filter(category__event=event).order_by('-purchase_date')
         except Event.DoesNotExist:
@@ -214,7 +214,7 @@ class TicketValidationView(APIView):
                 return Response({"error": "Identificativo biglietto mancante"}, status=status.HTTP_400_BAD_REQUEST)
 
             event = ticket.category.event
-            if event.organizer != request.user and not request.user.is_super_admin:
+            if event.organizer != request.user and not request.user.is_super_admin and not request.user.has_app_permission('tickets.manage'):
                 return Response({"error": "Permesso negato"}, status=status.HTTP_403_FORBIDDEN)
 
             if ticket.is_checked_in:
