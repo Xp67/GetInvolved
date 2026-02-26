@@ -29,7 +29,8 @@ import {
   Avatar,
   CardContent,
   Chip,
-  Card
+  Card,
+  Autocomplete
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import InfoIcon from '@mui/icons-material/Info';
@@ -57,6 +58,40 @@ function EventEdit() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
+
+  // Location suggestions
+  const [options, setOptions] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    if (inputValue === '') {
+      setOptions([]);
+      return undefined;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(inputValue)}&addressdetails=1&limit=8`);
+        const data = await response.json();
+        if (active) {
+          // Filter out duplicates if any and map to label/value
+          const uniqueResults = data.map(item => item.display_name);
+          setOptions([...new Set(uniqueResults)]);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions", error);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [inputValue]);
 
   // Ticket Categories
   const [categories, setCategories] = useState([]);
@@ -234,7 +269,7 @@ function EventEdit() {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-        <IconButton onClick={() => navigate(`/dashboard`)} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
+        <IconButton onClick={() => navigate('/dashboard')} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" fontWeight="bold">Gestione Evento</Typography>
@@ -271,7 +306,28 @@ function EventEdit() {
                     <TextField required fullWidth label="Descrizione" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField required fullWidth label="Luogo" value={location} onChange={(e) => setLocation(e.target.value)} />
+                    <Autocomplete
+                      value={location}
+                      onChange={(event, newValue) => {
+                        setLocation(newValue || "");
+                      }}
+                      inputValue={inputValue}
+                      onInputChange={(event, newInputValue) => {
+                        setInputValue(newInputValue);
+                      }}
+                      options={options}
+                      noOptionsText="Nessun luogo trovato"
+                      loading={inputValue.length > 0 && options.length === 0}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Luogo (Seleziona dai suggerimenti)"
+                          required
+                          fullWidth
+                          placeholder="Inizia a scrivere per vedere i suggerimenti..."
+                        />
+                      )}
+                    />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField required fullWidth label="Data e Ora" type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} InputLabelProps={{ shrink: true }} />
