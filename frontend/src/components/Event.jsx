@@ -122,6 +122,7 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                                 <IconButton
                                     size="small"
                                     onClick={() => onEdit(event)}
+                                    aria-label="modifica"
                                     sx={{
                                         color: '#ffb74d',
                                         border: '1px solid',

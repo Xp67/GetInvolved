@@ -44,7 +44,6 @@ function Dashboard() {
   const [location, setLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [open, setOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
@@ -73,7 +72,6 @@ function Dashboard() {
   };
 
   const handleOpen = () => {
-    setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
@@ -90,12 +88,7 @@ function Dashboard() {
   };
 
   const handleEditOpen = (event) => {
-    setEditingEvent(event);
-    setTitle(event.title);
-    setDescription(event.description);
-    setLocation(event.location);
-    setEventDate(formatDateTimeForInput(event.event_date));
-    setOpen(true);
+    navigate(`/dashboard/eventi/${event.id}/edit`);
   };
 
   const handleViewOpen = (event) => {
@@ -104,7 +97,6 @@ function Dashboard() {
 
   const handleClose = () => {
     setOpen(false);
-    setEditingEvent(null);
     setTitle("");
     setDescription("");
     setLocation("");
@@ -136,11 +128,7 @@ function Dashboard() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (editingEvent) {
-      updateEvent();
-    } else {
-      createEvent();
-    }
+    createEvent();
   };
 
   const createEvent = () => {
@@ -162,25 +150,6 @@ function Dashboard() {
       .catch((error) => alert(error));
   };
 
-  const updateEvent = () => {
-    const eventData = {
-      title,
-      description,
-      location,
-      event_date: eventDate ? new Date(eventDate).toISOString() : null,
-    };
-    api
-      .patch(`/api/event/update/${editingEvent.id}/`, eventData)
-      .then((res) => {
-        if (res.status === 200) {
-            handleClose();
-            getEvents();
-            setSnackbarOpen(true);
-        }
-        else alert("Error updating event");
-      })
-      .catch((error) => alert(error));
-  };
 
   const renderSection = () => {
     switch (currentSection) {
@@ -331,10 +300,10 @@ function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Dialog Creazione/Modifica Evento */}
+      {/* Dialog Creazione Evento */}
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {editingEvent ? "Modifica Evento" : "Crea Nuovo Evento"}
+          Crea Nuovo Evento
           <IconButton
             aria-label="close"
             onClick={handleClose}
@@ -401,14 +370,14 @@ function Dashboard() {
               sx={{
                 mt: 3,
                 mb: 2,
-                backgroundColor: editingEvent ? '#ffb74d' : 'primary.main',
+                backgroundColor: 'primary.main',
                 '&:hover': {
-                  backgroundColor: editingEvent ? '#ffa726' : 'primary.dark',
+                  backgroundColor: 'primary.dark',
                 },
                 textTransform: 'none'
               }}
             >
-              {editingEvent ? "Salva Modifiche" : "Crea Evento"}
+              Crea Evento
             </Button>
           </Box>
         </DialogContent>

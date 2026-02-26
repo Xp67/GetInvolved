@@ -11,4 +11,3 @@ python-dotenv
 gunicorn
 whitenoise
 pillow
-react-leaflet
