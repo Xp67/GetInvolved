@@ -17,6 +17,10 @@ Quando si apportano modifiche alla UI o alla logica di visualizzazione:
 - **Controllo Incrociato**: Verificare sempre sia la versione grafica **Web (Desktop)** che quella **Mobile**.
 - **Ottimizzazione**: Cercare le soluzioni migliori in base al contesto (es. Drawer vs Sidebar, icone vs testo) per garantire un'esperienza utente coerente e funzionale su tutti i dispositivi.
 
+## Gestione Dati e Ambiente
+- **Persistenza Database**: Il database (`db.sqlite3`) **non deve mai essere resettato o cancellato**. Tutte le migrazioni devono essere applicate per mantenere i dati esistenti. Se un database viene accidentalmente rimosso, deve essere ripristinato dalla cronologia Git.
+- **Rispetto dei Commit dell'Utente**: Ogni volta che si lavora su un branch o una pull request, è obbligatorio controllare se l'utente ha effettuato dei commit. Tali modifiche devono essere mantenute nel lavoro finale. Se si ritiene che i commit dell'utente possano essere migliorati, è necessario chiedere esplicitamente conferma prima di procedere con modifiche sostanziali a quel codice.
+
 ## Struttura Progetto
 - `backend/`: Django REST Framework API.
 - `frontend/`: React (Vite) + Material UI.

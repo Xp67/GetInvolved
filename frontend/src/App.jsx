@@ -6,6 +6,8 @@ import Register from "./pages/Register"
 import NotFound from "./pages/NotFound"
 import LandingPage from "./pages/LandingPage"
 import Dashboard from "./pages/Dashboard"
+import EventDetail from "./pages/EventDetail"
+import EventEdit from "./pages/EventEdit"
 import Profile from "./pages/Profile"
 import Navbar from "./components/Navbar"
 import '@fontsource/roboto/300.css';
@@ -40,6 +42,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/eventi/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EventEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/eventi/:id"
+          element={
+            <ProtectedRoute>
+              <EventDetail />
             </ProtectedRoute>
           }
         />

@@ -21,6 +21,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
 
 
 function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = true }) {
@@ -57,11 +58,18 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
     return (
         <Card sx={{ mb: 2, height: '100%', display: 'flex', flexDirection: 'column', boxShadow: 1, '&:hover': { boxShadow: 3 }, borderRadius: 2 }}>
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 1 }}>
                     <Typography variant="h6" component="div" fontWeight="bold" color="primary" sx={{ lineHeight: 1.2 }}>
                         {event.title}
                     </Typography>
                 </Box>
+
+                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, color: 'text.secondary' }}>
+                    <PersonIcon sx={{ fontSize: '0.875rem' }} />
+                    <Typography variant="caption" fontWeight="medium">
+                        {event.organizer_name}
+                    </Typography>
+                </Stack>
 
                 <Typography variant="body2" color="text.secondary" sx={{
                     mb: 2,
@@ -102,6 +110,7 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                                 size="small"
                                 color="primary"
                                 onClick={() => onView(event)}
+                                aria-label="visualizza"
                                 sx={{ border: '1px solid', borderColor: 'primary.light' }}
                             >
                                 <VisibilityIcon fontSize="small" />
@@ -113,6 +122,7 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                                 <IconButton
                                     size="small"
                                     onClick={() => onEdit(event)}
+                                    aria-label="modifica"
                                     sx={{
                                         color: '#ffb74d',
                                         border: '1px solid',

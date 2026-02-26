@@ -13,6 +13,10 @@ export const PERMISSIONS_CONFIG = {
       'events.delete_own',
       'events.delete_all'
     ],
+    biglietti: [
+      'tickets.manage',
+      'tickets.purchase'
+    ],
     utenti: [
       'users.view',
       'users.assign_roles'
