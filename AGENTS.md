@@ -23,4 +23,4 @@ Quando si apportano modifiche alla UI o alla logica di visualizzazione:
 
 ## Struttura Progetto
 - `backend/`: Django REST Framework API.
-- `frontend/`: React (Vite) + Material UI.
+- `admin/`: React (Vite) + Material UI.
