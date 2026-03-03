@@ -19,6 +19,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import SearchIcon from '@mui/icons-material/Search';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MenuIcon from '@mui/icons-material/Menu';
+import LinkIcon from '@mui/icons-material/Link';
 
 function Profile() {
     const theme = useTheme();
@@ -222,9 +223,22 @@ function Profile() {
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Il tuo Codice</Typography>
                         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                             <Typography variant="h3" fontWeight="900" color="primary.main" sx={{ letterSpacing: 2 }}>{profile.affiliate_code}</Typography>
-                            <Tooltip title="Copia"><IconButton onClick={() => { navigator.clipboard.writeText(profile.affiliate_code); setMessage({ type: 'success', text: 'Copiato!' }); setOpenSnackbar(true); }}><ContentCopyIcon /></IconButton></Tooltip>
+                            <Tooltip title="Copia Codice"><IconButton onClick={() => { navigator.clipboard.writeText(profile.affiliate_code); setMessage({ type: 'success', text: 'Codice Copiato!' }); setOpenSnackbar(true); }}><ContentCopyIcon /></IconButton></Tooltip>
                             <Tooltip title="Personalizza"><IconButton onClick={() => { setEditedAffiliateCode(profile.affiliate_code); setAffiliateError(''); setOpenEditCodeDialog(true); }}><EditIcon /></IconButton></Tooltip>
                         </Stack>
+                        <Button
+                            variant="outlined"
+                            startIcon={<LinkIcon />}
+                            sx={{ mt: 2, borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
+                            onClick={() => {
+                                const link = `${window.location.origin}/register?ref=${profile.affiliate_code}`;
+                                navigator.clipboard.writeText(link);
+                                setMessage({ type: 'success', text: 'Link di Invito Copiato!' });
+                                setOpenSnackbar(true);
+                            }}
+                        >
+                            Copia Link Invito
+                        </Button>
                     </Paper>
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>

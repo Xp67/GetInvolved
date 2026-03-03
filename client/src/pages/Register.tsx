@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../constants';
 import {
@@ -8,6 +8,8 @@ import {
 
 function Register() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [password2, setPassword2] = useState('');
@@ -20,12 +22,24 @@ function Register() {
         setLoading(true);
         setError('');
         try {
-            const res = await api.post('/api/user/register/', { email, password });
+            const affiliate_code = localStorage.getItem('affiliate_code');
+            const affiliate_expiry = localStorage.getItem('affiliate_expiry');
+            const payload: any = { email, password };
+
+            if (affiliate_code && affiliate_expiry && parseInt(affiliate_expiry) > Date.now()) {
+                payload.affiliated_to_code = affiliate_code;
+            }
+
+            const res = await api.post('/api/user/register/', payload);
+
+            localStorage.removeItem('affiliate_code');
+            localStorage.removeItem('affiliate_expiry');
+
             // Auto-login: save JWT tokens
             localStorage.setItem(ACCESS_TOKEN, res.data.access);
             localStorage.setItem(REFRESH_TOKEN, res.data.refresh);
             // Navigate to onboarding for first-time users
-            navigate('/onboarding');
+            navigate(`/onboarding${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`);
         } catch (err: any) {
             const data = err.response?.data;
             const msg = data ? Object.values(data).flat().join(' ') : 'Errore durante la registrazione.';
@@ -66,7 +80,7 @@ function Register() {
 
                 <Typography variant="body2" textAlign="center" color="text.secondary">
                     Hai già un account?{' '}
-                    <Typography component={Link} to="/login" variant="body2" color="primary" fontWeight="bold"
+                    <Typography component={Link} to={`/login${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} variant="body2" color="primary" fontWeight="bold"
                         sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
                         Accedi
                     </Typography>

@@ -32,7 +32,14 @@ class EventListCreate(generics.ListCreateAPIView):
         if user.has_app_permission('events.view_own'):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
-    
+
+
+class PublicEventListView(generics.ListAPIView):
+    """Public read-only event list for the client home page."""
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
+    permission_classes = [AllowAny]
+
 class EventDelete(generics.DestroyAPIView):
     serializer_class = EventSerializer
     permission_classes = [EventPermission]
@@ -60,6 +67,13 @@ class EventUpdate(generics.UpdateAPIView):
 class EventDetail(generics.RetrieveAPIView):
     serializer_class = EventSerializer
     permission_classes = [EventPermission]
+    queryset = Event.objects.all()
+
+
+class PublicEventDetailView(generics.RetrieveAPIView):
+    """Public read-only event detail for the client."""
+    serializer_class = EventSerializer
+    permission_classes = [AllowAny]
     queryset = Event.objects.all()
 
 

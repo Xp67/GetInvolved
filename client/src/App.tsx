@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -12,6 +13,15 @@ import { Box } from '@mui/material';
 function AppContent() {
     const location = useLocation();
     const hideNavbar = location.pathname === '/onboarding';
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const ref = params.get('ref');
+        if (ref) {
+            localStorage.setItem('affiliate_code', ref);
+            localStorage.setItem('affiliate_expiry', (Date.now() + 7 * 24 * 60 * 60 * 1000).toString());
+        }
+    }, [location.search]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>

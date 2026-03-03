@@ -44,13 +44,13 @@ function EventDetail() {
     }, [id]);
 
     const handleBuyTicket = async () => {
-        if (!isLoggedIn) { navigate('/login'); return; }
+        if (!isLoggedIn) { navigate(`/login?redirect=/event/${id}`); return; }
         try {
             await api.post('/api/tickets/purchase/', { category: selectedCategory.id });
-            setSnackbar({ open: true, message: 'Biglietto acquistato con successo!', severity: 'success' });
             setBuyDialogOpen(false);
-            // Refresh event data
-            const res = await api.get(`/api/event/${id}/`);
+            setSnackbar({ open: true, message: 'Biglietto acquistato con successo! 🎉', severity: 'success' });
+            // Refresh event data using public endpoint
+            const res = await api.get(`/api/event/public/${id}/`);
             setEvent(res.data);
         } catch (err: any) {
             setSnackbar({ open: true, message: err.response?.data?.error || 'Errore nell\'acquisto', severity: 'error' });
@@ -169,7 +169,7 @@ function EventDetail() {
                     {isLoggedIn ? (
                         <Button onClick={handleBuyTicket} variant="contained" sx={{ textTransform: 'none' }}>Conferma</Button>
                     ) : (
-                        <Button onClick={() => navigate('/login')} variant="contained" sx={{ textTransform: 'none' }}>Accedi</Button>
+                        <Button onClick={() => navigate(`/login?redirect=/event/${id}`)} variant="contained" sx={{ textTransform: 'none' }}>Accedi</Button>
                     )}
                 </DialogActions>
             </Dialog>

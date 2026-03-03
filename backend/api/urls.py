@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path("event/", views.EventListCreate.as_view(), name="event-list"),
+    path("event/public/", views.PublicEventListView.as_view(), name="event-public"),
+    path("event/public/<int:pk>/", views.PublicEventDetailView.as_view(), name="event-public-detail"),
     path("event/<int:pk>/", views.EventDetail.as_view(), name="event-detail"),
     path("event/delete/<int:pk>/", views.EventDelete.as_view(), name="event-delete"),
     path("event/update/<int:pk>/", views.EventUpdate.as_view(), name="event-update"),

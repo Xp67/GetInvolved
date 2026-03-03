@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import {
@@ -20,6 +20,8 @@ const musicGenres: string[] = [];
 
 function Onboarding() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
     const [activeStep, setActiveStep] = useState(0);
     const [nickname, setNickname] = useState('');
     const [location, setLocation] = useState('');
@@ -30,10 +32,10 @@ function Onboarding() {
     // Redirect countdown on last step
     useEffect(() => {
         if (activeStep === 3) {
-            const timer = setTimeout(() => navigate('/'), 3000);
+            const timer = setTimeout(() => navigate(redirectTo), 3000);
             return () => clearTimeout(timer);
         }
-    }, [activeStep, navigate]);
+    }, [activeStep, navigate, redirectTo]);
 
     const toggleGenre = (genre: string) => {
         setSelectedGenres((prev) =>

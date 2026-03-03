@@ -37,14 +37,15 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Skip refresh logic for auth endpoints themselves
+        // Only attempt refresh if the original request had a token (user was logged in)
+        const hadToken = originalRequest.headers?.Authorization?.startsWith('Bearer ');
         if (
             error.response?.status === 401 &&
             !originalRequest._retry &&
-            !originalRequest.url?.includes('/api/token/')
+            !originalRequest.url?.includes('/api/token/') &&
+            hadToken
         ) {
             if (isRefreshing) {
-                // Queue this request until refresh completes
                 return new Promise((resolve, reject) => {
                     failedQueue.push({
                         resolve: (token: string) => {
@@ -61,6 +62,7 @@ api.interceptors.response.use(
 
             const refreshToken = localStorage.getItem(REFRESH_TOKEN);
             if (!refreshToken) {
+                isRefreshing = false;
                 localStorage.clear();
                 window.location.href = "/";
                 return Promise.reject(error);

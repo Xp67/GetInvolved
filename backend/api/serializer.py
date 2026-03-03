@@ -147,15 +147,18 @@ class UserSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class RegisterSerializer(serializers.ModelSerializer):
+    affiliated_to_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'password']
+        fields = ['id', 'email', 'password', 'affiliated_to_code']
         extra_kwargs = {
             'password': {'write_only': True},
             'email': {'required': True}
         }
 
     def create(self, validated_data):
+        affiliated_to_code = validated_data.pop('affiliated_to_code', None)
         # Auto-generate username from email local part
         email = validated_data['email']
         base_username = email.split('@')[0].lower()
@@ -166,6 +169,17 @@ class RegisterSerializer(serializers.ModelSerializer):
             counter += 1
         validated_data['username'] = username
         user = User.objects.create_user(**validated_data)
+
+        if affiliated_to_code:
+            try:
+                target_user = User.objects.get(affiliate_code__iexact=affiliated_to_code)
+                if target_user != user:
+                    user.affiliated_to = target_user
+                    user.affiliation_date = timezone.now()
+                    user.save()
+            except User.DoesNotExist:
+                pass
+                
         return user
 
 

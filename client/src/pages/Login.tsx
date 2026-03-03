@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../constants';
 import {
@@ -8,6 +8,8 @@ import {
 
 function Login() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -25,9 +27,9 @@ function Login() {
             // Check if onboarding is completed
             const profileRes = await api.get('/api/user/profile/');
             if (!profileRes.data.onboarding_completed) {
-                navigate('/onboarding');
+                navigate(`/onboarding?redirect=${encodeURIComponent(redirectTo)}`);
             } else {
-                navigate('/');
+                navigate(redirectTo);
             }
         } catch {
             setError('Email o password non validi.');
@@ -72,7 +74,7 @@ function Login() {
 
                 <Typography variant="body2" textAlign="center" color="text.secondary">
                     Non hai un account?{' '}
-                    <Typography component={Link} to="/register" variant="body2" color="primary" fontWeight="bold"
+                    <Typography component={Link} to={`/register${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} variant="body2" color="primary" fontWeight="bold"
                         sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
                         Registrati
                     </Typography>
