@@ -46,6 +46,9 @@ class User(AbstractUser):
     affiliate_code = models.CharField(max_length=15, unique=True, blank=True)
     affiliated_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='affiliates')
     affiliation_date = models.DateTimeField(null=True, blank=True)
+    onboarding_completed = models.BooleanField(default=False)
+    location = models.CharField(max_length=500, blank=True, null=True)
+    music_preferences = models.JSONField(default=list, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -87,6 +90,38 @@ def assign_base_role(sender, instance, created, **kwargs):
         base_role = Role.objects.filter(name='Base').first()
         if base_role:
             instance.roles.add(base_role)
+        # Auto-create organizer profile
+        OrganizerProfile.objects.get_or_create(user=instance)
+
+
+class OrganizerProfile(models.Model):
+    EMPLOYEE_CHOICES = [
+        ('1-5', '1-5'),
+        ('6-20', '6-20'),
+        ('21-50', '21-50'),
+        ('50+', '50+'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='organizer_profile')
+    is_company = models.BooleanField(default=True)
+
+    # Company fields
+    company_name = models.CharField(max_length=200, blank=True, null=True)
+    company_address = models.CharField(max_length=500, blank=True, null=True)
+    vat_number = models.CharField(max_length=50, blank=True, null=True)
+
+    # Individual fields
+    first_name_org = models.CharField(max_length=100, blank=True, null=True)
+    last_name_org = models.CharField(max_length=100, blank=True, null=True)
+    fiscal_code = models.CharField(max_length=20, blank=True, null=True)
+
+    # Common fields
+    employee_count = models.CharField(max_length=10, blank=True, null=True, choices=EMPLOYEE_CHOICES)
+    event_types = models.JSONField(default=list, blank=True)
+    admin_onboarding_completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"OrganizerProfile for {self.user.email}"
 
 class Event(models.Model):
     title = models.CharField(max_length=100)

@@ -7,7 +7,7 @@ from .serializer import (
     UserSerializer, EventSerializer, RoleSerializer,
     PermissionCategorySerializer, AppPermissionSerializer,
     RegisterSerializer, AffiliateSerializer, TicketCategorySerializer,
-    TicketSerializer
+    TicketSerializer, OnboardingSerializer, AdminOnboardingSerializer
 )
 
 User = get_user_model()
@@ -67,6 +67,29 @@ class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        # Generate JWT tokens for auto-login
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'user': RegisterSerializer(user).data,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'onboarding_completed': user.onboarding_completed,
+        }, status=status.HTTP_201_CREATED)
+
+
+class OnboardingView(generics.UpdateAPIView):
+    serializer_class = OnboardingSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['patch']
+
+    def get_object(self):
+        return self.request.user
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -263,3 +286,14 @@ class TicketValidationView(APIView):
 
         except Ticket.DoesNotExist:
             return Response({"error": "Biglietto non trovato"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AdminOnboardingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        serializer = AdminOnboardingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.update(request.user, serializer.validated_data)
+        return Response({"message": "Onboarding admin completato"}, status=status.HTTP_200_OK)
+

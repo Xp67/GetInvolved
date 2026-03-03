@@ -1,0 +1,212 @@
+import React, { useState } from "react";
+import {
+    Card,
+    CardContent,
+    Typography,
+    IconButton,
+    Box,
+    Stack,
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    Button,
+    Tooltip
+} from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
+
+interface EventData {
+    id: number;
+    title: string;
+    description: string;
+    location: string;
+    event_date: string | null;
+    organizer: number;
+    organizer_name: string;
+    created_at: string;
+    ticket_categories: any[];
+}
+
+interface EventProps {
+    event: EventData;
+    onDelete: (id: number) => void;
+    onEdit: (event: EventData) => void;
+    onView: (event: EventData) => void;
+    canDelete?: boolean;
+    canEdit?: boolean;
+}
+
+function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = true }: EventProps) {
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+    const formattedDate = event.event_date
+        ? new Date(event.event_date).toLocaleDateString("it-IT", {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        })
+        : "Data non impostata";
+
+    const formattedTime = event.event_date
+        ? new Date(event.event_date).toLocaleTimeString("it-IT", {
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+        : "";
+
+    const handleDeleteClick = () => {
+        setConfirmDeleteOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        onDelete(event.id);
+        setConfirmDeleteOpen(false);
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDeleteOpen(false);
+    };
+
+    return (
+        <Card sx={{
+            mb: 2,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': { boxShadow: 4, transform: 'translateY(-2px)' },
+        }} elevation={0}>
+            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
+                <Box sx={{ mb: 1 }}>
+                    <Typography variant="h6" component="div" fontWeight="bold" color="primary" sx={{ lineHeight: 1.2 }}>
+                        {event.title}
+                    </Typography>
+                </Box>
+
+                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, color: 'text.secondary' }}>
+                    <PersonIcon sx={{ fontSize: '0.875rem' }} />
+                    <Typography variant="caption" fontWeight="medium">
+                        {event.organizer_name}
+                    </Typography>
+                </Stack>
+
+                <Typography variant="body2" color="text.secondary" sx={{
+                    mb: 2,
+                    flexGrow: 1,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                }}>
+                    {event.description}
+                </Typography>
+
+                <Divider sx={{ my: 1.5 }} />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', gap: 2 }}>
+                    <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+                        <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                            <LocationOnIcon fontSize="small" color="action" />
+                            <Typography variant="caption" fontWeight="medium">{event.location}</Typography>
+                        </Stack>
+                        <Stack direction="row" flexWrap="wrap" gap={1.5}>
+                            <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                                <CalendarTodayIcon fontSize="small" color="action" />
+                                <Typography variant="caption" fontWeight="medium">{formattedDate}</Typography>
+                            </Stack>
+                            {formattedTime && (
+                                <Stack direction="row" alignItems="center" spacing={1} color="text.secondary">
+                                    <AccessTimeIcon fontSize="small" color="action" />
+                                    <Typography variant="caption" fontWeight="medium">{formattedTime}</Typography>
+                                </Stack>
+                            )}
+                        </Stack>
+                    </Stack>
+
+                    <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Visualizza">
+                            <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => onView(event)}
+                                aria-label="visualizza"
+                                sx={{ border: '1px solid', borderColor: 'primary.light' }}
+                            >
+                                <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+
+                        {canEdit && (
+                            <Tooltip title="Modifica">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onEdit(event)}
+                                    aria-label="modifica"
+                                    color="warning"
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: 'warning.light',
+                                    }}
+                                >
+                                    <EditIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {canDelete && (
+                            <Tooltip title="Elimina">
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={handleDeleteClick}
+                                    sx={{ border: '1px solid', borderColor: 'error.light' }}
+                                >
+                                    <DeleteIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Stack>
+                </Box>
+            </CardContent>
+
+            {/* Dialog di conferma eliminazione */}
+            <Dialog
+                open={confirmDeleteOpen}
+                onClose={handleCancelDelete}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    {"Conferma eliminazione"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Sei sicuro di voler eliminare l'evento "{event.title}"? Questa azione non può essere annullata.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={handleCancelDelete} variant="outlined" sx={{ textTransform: 'none' }}>
+                        Annulla
+                    </Button>
+                    <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus sx={{ textTransform: 'none' }}>
+                        Elimina
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Card>
+    );
+}
+
+export default Event;

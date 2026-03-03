@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Event, Role, AppPermission, PermissionCategory, Ticket, TicketCategory
+from .models import Event, Role, AppPermission, PermissionCategory, Ticket, TicketCategory, OrganizerProfile
 
 User = get_user_model()
 
@@ -31,6 +31,16 @@ class RoleSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'permissions_details', 'permission_ids', 'is_deletable']
         read_only_fields = ['is_deletable']
 
+class OrganizerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrganizerProfile
+        fields = [
+            'is_company', 'company_name', 'company_address', 'vat_number',
+            'first_name_org', 'last_name_org', 'fiscal_code',
+            'employee_count', 'event_types', 'admin_onboarding_completed',
+        ]
+
+
 class UserSerializer(serializers.ModelSerializer):
     roles_details = RoleSerializer(source='roles', many=True, read_only=True)
     role_ids = serializers.PrimaryKeyRelatedField(
@@ -43,6 +53,7 @@ class UserSerializer(serializers.ModelSerializer):
     all_permissions = serializers.SerializerMethodField()
     affiliated_to_username = serializers.SerializerMethodField()
     affiliated_to_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    organizer_profile = OrganizerProfileSerializer(read_only=True)
 
     class Meta:
         model = User
@@ -50,7 +61,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone_number', 'bio', 'avatar', 'password',
             'roles_details', 'role_ids', 'all_permissions', 'is_super_admin',
-            'affiliate_code', 'affiliated_to_username', 'affiliated_to_code', 'affiliation_date'
+            'affiliate_code', 'affiliated_to_username', 'affiliated_to_code', 'affiliation_date',
+            'onboarding_completed', 'location', 'music_preferences',
+            'organizer_profile',
         ]
         extra_kwargs = {
             'password': {'write_only': True},
@@ -136,15 +149,85 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'email', 'password']
         extra_kwargs = {
             'password': {'write_only': True},
             'email': {'required': True}
         }
 
     def create(self, validated_data):
+        # Auto-generate username from email local part
+        email = validated_data['email']
+        base_username = email.split('@')[0].lower()
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        validated_data['username'] = username
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class OnboardingSerializer(serializers.ModelSerializer):
+    nickname = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ['nickname', 'location', 'music_preferences', 'onboarding_completed']
+        read_only_fields = ['onboarding_completed']
+
+    def update(self, instance, validated_data):
+        nickname = validated_data.pop('nickname', None)
+        if nickname:
+            instance.username = nickname
+        instance.location = validated_data.get('location', instance.location)
+        instance.music_preferences = validated_data.get('music_preferences', instance.music_preferences)
+        instance.onboarding_completed = True
+        instance.save()
+        return instance
+
+
+class AdminOnboardingSerializer(serializers.Serializer):
+    nickname = serializers.CharField(required=False, allow_blank=True)
+    is_company = serializers.BooleanField(required=False, default=True)
+
+    # Company fields
+    company_name = serializers.CharField(required=False, allow_blank=True)
+    company_address = serializers.CharField(required=False, allow_blank=True)
+    vat_number = serializers.CharField(required=False, allow_blank=True)
+
+    # Individual fields
+    first_name_org = serializers.CharField(required=False, allow_blank=True)
+    last_name_org = serializers.CharField(required=False, allow_blank=True)
+    fiscal_code = serializers.CharField(required=False, allow_blank=True)
+
+    # Common
+    employee_count = serializers.CharField(required=False, allow_blank=True)
+    event_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+
+    def update(self, instance, validated_data):
+        # Update user nickname
+        nickname = validated_data.pop('nickname', None)
+        if nickname:
+            instance.username = nickname
+            instance.save()
+
+        # Update organizer profile
+        profile, _ = OrganizerProfile.objects.get_or_create(user=instance)
+        profile.is_company = validated_data.get('is_company', profile.is_company)
+        profile.company_name = validated_data.get('company_name', profile.company_name)
+        profile.company_address = validated_data.get('company_address', profile.company_address)
+        profile.vat_number = validated_data.get('vat_number', profile.vat_number)
+        profile.first_name_org = validated_data.get('first_name_org', profile.first_name_org)
+        profile.last_name_org = validated_data.get('last_name_org', profile.last_name_org)
+        profile.fiscal_code = validated_data.get('fiscal_code', profile.fiscal_code)
+        profile.employee_count = validated_data.get('employee_count', profile.employee_count)
+        profile.event_types = validated_data.get('event_types', profile.event_types)
+        profile.admin_onboarding_completed = True
+        profile.save()
+
+        return instance
 
 class AffiliateSerializer(serializers.ModelSerializer):
     class Meta:

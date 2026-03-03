@@ -1,0 +1,204 @@
+import React, { useState, useEffect } from 'react';
+import {
+    AppBar,
+    Toolbar,
+    Typography,
+    Button,
+    Box,
+    IconButton,
+    Container,
+    Avatar,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    useTheme,
+    useMediaQuery,
+} from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import { ACCESS_TOKEN } from '../constants';
+import api from '../api';
+import { canAccessPosition, AppUser } from '../utils/permissionUtils';
+import ColorModeIconDropdown from '../../contexts/theme/ColorModeIconDropdown';
+
+function Navbar() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [user, setUser] = useState<AppUser | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem(ACCESS_TOKEN);
+        setIsLoggedIn(!!token);
+        if (token) {
+            fetchUserProfile();
+        }
+    }, [location]);
+
+    const fetchUserProfile = async () => {
+        try {
+            const res = await api.get("/api/user/profile/");
+            setUser(res.data);
+        } catch (error) {
+            console.error("Error fetching user profile", error);
+            localStorage.clear();
+            setIsLoggedIn(false);
+            setUser(null);
+        }
+    };
+
+    const canSeeDashboard = isLoggedIn && canAccessPosition(user, 'dashboard');
+
+    const navItems = [
+        { label: 'Home', path: '/' },
+        ...(isLoggedIn ? [
+            ...(canSeeDashboard ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
+            ...(isMobile ? [] : [{ label: 'Profilo', path: '/profile' }]),
+            { label: 'Esci', path: '/logout', color: 'error.main' }
+        ] : [
+            { label: 'Inizia ora', path: '/login' }
+        ])
+    ];
+
+    const handleNavigate = (path: string) => {
+        navigate(path);
+        setDrawerOpen(false);
+    };
+
+    return (
+        <AppBar
+            position="static"
+            elevation={0}
+            sx={{
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+            }}
+        >
+            <Container maxWidth="lg">
+                <Toolbar disableGutters>
+                    <Typography
+                        variant="h6"
+                        component="div"
+                        sx={{ flexGrow: 1, fontWeight: 'bold', cursor: 'pointer', color: 'primary.main' }}
+                        onClick={() => navigate('/')}
+                    >
+                        GetInvolved
+                    </Typography>
+
+                    {/* Desktop Menu */}
+                    {!isMobile && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Button color="inherit" onClick={() => navigate('/')} sx={{ textTransform: 'none' }}>Home</Button>
+
+                            {!isLoggedIn ? (
+                                <Button color="inherit" onClick={() => navigate('/login')} sx={{ textTransform: 'none' }}>ACCEDI</Button>
+                            ) : (
+                                <>
+                                    {canSeeDashboard && (
+                                        <Button color="inherit" onClick={() => navigate('/dashboard')} sx={{ textTransform: 'none' }}>Dashboard</Button>
+                                    )}
+
+                                    <Button
+                                        onClick={() => navigate('/profile')}
+                                        color="inherit"
+                                        sx={{ textTransform: 'none', display: 'flex', alignItems: 'center', ml: 1, px: 1 }}
+                                    >
+                                        <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main', fontSize: '1rem' }}>
+                                            {user?.username ? user.username[0].toUpperCase() : <AccountCircle />}
+                                        </Avatar>
+                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                            {user?.username}
+                                        </Typography>
+                                    </Button>
+
+                                    <IconButton
+                                        onClick={() => navigate('/logout')}
+                                        sx={{ color: 'error.main', ml: 0.5 }}
+                                        aria-label="logout"
+                                    >
+                                        <LogoutIcon />
+                                    </IconButton>
+                                </>
+                            )}
+
+                            <ColorModeIconDropdown />
+                        </Box>
+                    )}
+
+                    {/* Mobile Menu */}
+                    {isMobile && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <ColorModeIconDropdown />
+                            <IconButton
+                                edge="start"
+                                color="inherit"
+                                aria-label="menu"
+                                onClick={() => setDrawerOpen(true)}
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                        </Box>
+                    )}
+
+                    {/* Mobile Drawer */}
+                    <Drawer
+                        anchor="top"
+                        open={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        sx={{
+                            display: { xs: 'block', md: 'none' },
+                            '& .MuiDrawer-paper': { width: '100%', pt: 4, pb: 4 }
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                            {isLoggedIn && (
+                                <Box
+                                    onClick={() => handleNavigate('/profile')}
+                                    sx={{ mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                                >
+                                    <Avatar sx={{ width: 64, height: 64, mb: 1, bgcolor: 'primary.main', fontSize: '2rem' }}>
+                                        {user?.username ? user.username[0].toUpperCase() : <AccountCircle />}
+                                    </Avatar>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        {user?.username}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            <List sx={{ width: '100%' }}>
+                                {navItems.map((item) => (
+                                    <ListItem key={item.label} disablePadding sx={{ display: 'flex', justifyContent: 'center' }}>
+                                        <ListItemButton
+                                            onClick={() => handleNavigate(item.path)}
+                                            sx={{ textAlign: 'center', py: 2 }}
+                                        >
+                                            <ListItemText
+                                                primary={item.label}
+                                                primaryTypographyProps={{
+                                                    variant: 'h6',
+                                                    fontWeight: 'medium',
+                                                    color: item.color || 'text.primary'
+                                                }}
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </Box>
+                    </Drawer>
+                </Toolbar>
+            </Container>
+        </AppBar>
+    );
+}
+
+export default Navbar;

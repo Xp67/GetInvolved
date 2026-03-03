@@ -8,8 +8,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noEmit": true
   },
-  "include": ["contexts","costumizations"]
-
+  "include": [
+    "src",
+    "contexts",
+    "costumizations"
+  ]
 }
