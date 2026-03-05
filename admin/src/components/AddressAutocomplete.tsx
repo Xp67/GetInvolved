@@ -1,15 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    TextField, Paper, List, ListItemButton, ListItemText,
+    Paper, List, ListItemButton, ListItemText,
     CircularProgress, Box, InputAdornment, Typography,
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { AppTextField } from './form/index';
+
+export interface LocationData {
+    address: string;
+    latitude: number;
+    longitude: number;
+    country_code: string;
+}
 
 interface AddressAutocompleteProps {
     value: string;
     onChange: (address: string) => void;
+    onLocationSelect?: (data: LocationData) => void;
     label?: string;
     placeholder?: string;
+    disabled?: boolean;
 }
 
 interface NominatimResult {
@@ -17,9 +27,13 @@ interface NominatimResult {
     display_name: string;
     lat: string;
     lon: string;
+    address?: {
+        country_code?: string;
+        [key: string]: any;
+    };
 }
 
-function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder = 'Cerca un indirizzo...' }: AddressAutocompleteProps) {
+function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indirizzo', placeholder = 'Cerca un indirizzo...', disabled, sx }: AddressAutocompleteProps & { sx?: any }) {
     const [inputValue, setInputValue] = useState(value || '');
     const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
     const [loading, setLoading] = useState(false);
@@ -82,17 +96,29 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
         onChange(result.display_name);
         setSuggestions([]);
         setOpen(false);
+
+        // Send structured location data
+        if (onLocationSelect) {
+            onLocationSelect({
+                address: result.display_name,
+                latitude: parseFloat(result.lat),
+                longitude: parseFloat(result.lon),
+                country_code: (result.address?.country_code || '').toUpperCase(),
+            });
+        }
     };
 
     return (
-        <Box ref={containerRef} sx={{ position: 'relative', width: '100%' }}>
-            <TextField
+        <Box ref={containerRef} sx={{ position: 'relative', width: '100%', ...sx }}>
+            <AppTextField
                 fullWidth
+                id="address-autocomplete-field"
                 label={label}
                 placeholder={placeholder}
                 value={inputValue}
                 onChange={handleInputChange}
                 onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
+                disabled={disabled}
                 slotProps={{
                     input: {
                         startAdornment: (
@@ -156,3 +182,4 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
 }
 
 export default AddressAutocomplete;
+

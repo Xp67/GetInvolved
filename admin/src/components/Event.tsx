@@ -13,7 +13,8 @@ import {
     DialogContentText,
     DialogActions,
     Button,
-    Tooltip
+    Tooltip,
+    Chip
 } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -22,13 +23,17 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
+import ArchiveIcon from '@mui/icons-material/Archive';
 
-interface EventData {
+export interface EventData {
     id: number;
     title: string;
     description: string;
     location: string;
-    event_date: string | null;
+    date: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    status: string;
     organizer: number;
     organizer_name: string;
     created_at: string;
@@ -40,27 +45,39 @@ interface EventProps {
     onDelete: (id: number) => void;
     onEdit: (event: EventData) => void;
     onView: (event: EventData) => void;
+    onArchive?: (event: EventData) => void;
     canDelete?: boolean;
     canEdit?: boolean;
 }
 
-function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = true }: EventProps) {
+const STATUS_CONFIG: Record<string, { label: string; color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" }> = {
+    DRAFT: { label: "Bozza", color: "default" },
+    PUBLISHED: { label: "Pubblicato", color: "success" },
+    TO_BE_REFUNDED: { label: "Da Rimborsare", color: "warning" },
+    CONCLUDED: { label: "Concluso", color: "info" },
+    ARCHIVED: { label: "Archiviato", color: "secondary" },
+};
+
+function Event({ event, onDelete, onEdit, onView, onArchive, canDelete = true, canEdit = true }: EventProps) {
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-    const formattedDate = event.event_date
-        ? new Date(event.event_date).toLocaleDateString("it-IT", {
+    const statusInfo = STATUS_CONFIG[event.status] || { label: event.status, color: "default" as const };
+
+    const formattedDate = event.date
+        ? new Date(event.date + 'T00:00:00').toLocaleDateString("it-IT", {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
         })
         : "Data non impostata";
 
-    const formattedTime = event.event_date
-        ? new Date(event.event_date).toLocaleTimeString("it-IT", {
-            hour: '2-digit',
-            minute: '2-digit'
-        })
+    const formattedTime = event.start_time
+        ? event.start_time.substring(0, 5)
         : "";
+
+    const isDraft = event.status === 'DRAFT';
+    const isConcluded = event.status === 'CONCLUDED';
+    const isImmutable = event.status === 'CONCLUDED' || event.status === 'ARCHIVED';
 
     const handleDeleteClick = () => {
         setConfirmDeleteOpen(true);
@@ -86,13 +103,15 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
             borderRadius: 3,
             bgcolor: 'background.paper',
             transition: 'all 0.2s ease-in-out',
+            opacity: isImmutable ? 0.75 : 1,
             '&:hover': { boxShadow: 4, transform: 'translateY(-2px)' },
         }} elevation={0}>
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
-                <Box sx={{ mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Typography variant="h6" component="div" fontWeight="bold" color="primary" sx={{ lineHeight: 1.2 }}>
                         {event.title}
                     </Typography>
+                    <Chip label={statusInfo.label} color={statusInfo.color} size="small" sx={{ ml: 1, fontWeight: 'bold' }} />
                 </Box>
 
                 <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, color: 'text.secondary' }}>
@@ -148,7 +167,7 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                             </IconButton>
                         </Tooltip>
 
-                        {canEdit && (
+                        {canEdit && !isImmutable && (
                             <Tooltip title="Modifica">
                                 <IconButton
                                     size="small"
@@ -165,7 +184,21 @@ function Event({ event, onDelete, onEdit, onView, canDelete = true, canEdit = tr
                             </Tooltip>
                         )}
 
-                        {canDelete && (
+                        {isConcluded && onArchive && (
+                            <Tooltip title="Archivia">
+                                <IconButton
+                                    size="small"
+                                    color="secondary"
+                                    onClick={() => onArchive(event)}
+                                    aria-label="archivia"
+                                    sx={{ border: '1px solid', borderColor: 'secondary.light' }}
+                                >
+                                    <ArchiveIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {canDelete && isDraft && (
                             <Tooltip title="Elimina">
                                 <IconButton
                                     size="small"

@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
+import type { LocationData } from "../components/AddressAutocomplete";
+import { eventEditStyles as styles } from './EventEdit.styles';
+import { AppTextField, AppDateField, AppSelectField } from '../components/form/index';
 import {
-    Container, Typography, TextField, Button, Box, Paper, IconButton, Snackbar, Alert, CircularProgress,
-    Stack, Grid, Tabs, Tab, List, ListItem, ListItemText, Divider, Dialog, DialogTitle, DialogContent,
-    DialogActions, Chip, Card, CardContent,
+    Typography, Button, Box, Paper, IconButton, Snackbar, Alert, CircularProgress,
+    Stack, Grid, List, ListItem, ListItemText, Divider, Dialog, DialogTitle, DialogContent,
+    DialogActions, Chip, Card, CardContent, Select, MenuItem, FormControl, InputLabel,
+    useTheme, useMediaQuery, Drawer,
+    Grow
 } from "@mui/material";
+import AppSidebar from "../components/Sidebar";
+import type { SidebarItem } from "../components/Sidebar";
+import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import InfoIcon from '@mui/icons-material/Info';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
@@ -15,23 +23,38 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PublishIcon from '@mui/icons-material/Publish';
+import ArchiveIcon from '@mui/icons-material/Archive';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 function EventEdit() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const filterParam = searchParams.get('filter') || 'active';
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState(0);
+    const [currentSection, setCurrentSection] = useState('general');
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
 
     const [event, setEvent] = useState<any>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [location, setLocation] = useState("");
+    const [latitude, setLatitude] = useState<number | null>(null);
+    const [longitude, setLongitude] = useState<number | null>(null);
+    const [countryCode, setCountryCode] = useState("");
     const [eventDate, setEventDate] = useState("");
-
-
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
+    const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
+    const [ticketClauses, setTicketClauses] = useState("");
+    const [posterImage, setPosterImage] = useState<File | null>(null);
+    const [heroImage, setHeroImage] = useState<File | null>(null);
+    const [organizerLogo, setOrganizerLogo] = useState<File | null>(null);
 
     const [categories, setCategories] = useState<any[]>([]);
     const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -52,14 +75,6 @@ function EventEdit() {
         try { const res = await api.get("/api/user/profile/"); setUser(res.data); } catch (error) { console.error("Error fetching user profile", error); }
     };
 
-    const formatDateTimeForInput = (utcString: string) => {
-        if (!utcString) return "";
-        const d = new Date(utcString);
-        if (isNaN(d.getTime())) return "";
-        const pad = (n: number) => n.toString().padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-
     const fetchEvent = async () => {
         try {
             const res = await api.get(`/api/event/${id}/`);
@@ -68,7 +83,14 @@ function EventEdit() {
             setTitle(eventData.title);
             setDescription(eventData.description);
             setLocation(eventData.location);
-            setEventDate(formatDateTimeForInput(eventData.event_date));
+            setLatitude(eventData.latitude);
+            setLongitude(eventData.longitude);
+            setCountryCode(eventData.country_code || '');
+            setEventDate(eventData.date || '');
+            setStartTime(eventData.start_time ? eventData.start_time.substring(0, 5) : '');
+            setEndTime(eventData.end_time ? eventData.end_time.substring(0, 5) : '');
+            setBackgroundColor(eventData.background_color || '#FFFFFF');
+            setTicketClauses(eventData.ticket_clauses || '');
             setCategories(eventData.ticket_categories || []);
         } catch (error) {
             setSnackbar({ open: true, message: "Errore nel caricamento dell'evento", severity: "error" });
@@ -79,19 +101,84 @@ function EventEdit() {
         try { const res = await api.get(`/api/tickets/event/${id}/`); setAttendees(res.data); } catch (err) { console.error("Error fetching attendees", err); }
     };
 
+    const handleLocationSelect = (data: LocationData) => {
+        setLocation(data.address);
+        setLatitude(data.latitude);
+        setLongitude(data.longitude);
+        setCountryCode(data.country_code);
+    };
+
     const handleEventSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.patch(`/api/event/update/${id}/`, {
-                title, description, location,
-                event_date: eventDate ? new Date(eventDate).toISOString() : null,
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('location', location);
+            if (latitude !== null) formData.append('latitude', String(latitude));
+            if (longitude !== null) formData.append('longitude', String(longitude));
+            if (countryCode) formData.append('country_code', countryCode);
+            if (eventDate) formData.append('date', eventDate);
+            if (startTime) formData.append('start_time', startTime);
+            if (endTime) formData.append('end_time', endTime);
+            formData.append('background_color', backgroundColor);
+            formData.append('ticket_clauses', ticketClauses);
+            if (posterImage) formData.append('poster_image', posterImage);
+            if (heroImage) formData.append('hero_image', heroImage);
+            if (organizerLogo) formData.append('organizer_logo', organizerLogo);
+
+            await api.patch(`/api/event/update/${id}/`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
             setSnackbar({ open: true, message: "Evento aggiornato con successo!", severity: "success" });
             fetchEvent();
-        } catch (error) {
-            setSnackbar({ open: true, message: "Errore durante l'aggiornamento", severity: "error" });
+        } catch (error: any) {
+            const errData = error.response?.data;
+            let msg = "Errore durante l'aggiornamento";
+            if (errData && typeof errData === 'object') {
+                const messages = Object.entries(errData).map(([k, v]) => `${k}: ${v}`).join('\n');
+                if (messages) msg = messages;
+            }
+            setSnackbar({ open: true, message: msg, severity: "error" });
         } finally { setSaving(false); }
+    };
+
+    const handlePublish = async () => {
+        try {
+            await api.patch(`/api/event/update/${id}/`, { status: 'PUBLISHED' });
+            setSnackbar({ open: true, message: "Evento pubblicato!", severity: "success" });
+            fetchEvent();
+        } catch (error: any) {
+            const errData = error.response?.data;
+            let msg = "Impossibile pubblicare";
+            if (errData && typeof errData === 'object') {
+                const messages = Object.entries(errData).map(([k, v]) => `${k}: ${v}`).join('\n');
+                if (messages) msg = messages;
+            }
+            setSnackbar({ open: true, message: msg, severity: "error" });
+        }
+    };
+
+    const handleArchive = async () => {
+        if (!window.confirm("Sei sicuro di voler archiviare questo evento?")) return;
+        try {
+            await api.patch(`/api/event/update/${id}/`, { status: 'ARCHIVED' });
+            setSnackbar({ open: true, message: "Evento archiviato!", severity: "success" });
+            fetchEvent();
+        } catch (error: any) {
+            setSnackbar({ open: true, message: error.response?.data?.detail || "Errore nell'archiviazione", severity: "error" });
+        }
+    };
+
+    const handleForceStatus = async (newStatus: string) => {
+        try {
+            await api.patch(`/api/event/${id}/force-status/`, { status: newStatus });
+            setSnackbar({ open: true, message: `Stato cambiato a ${newStatus}`, severity: "success" });
+            fetchEvent();
+        } catch (error: any) {
+            setSnackbar({ open: true, message: error.response?.data?.error || 'Errore nel cambio stato', severity: "error" });
+        }
     };
 
     const handleOpenCategoryDialog = (cat: any = null) => {
@@ -153,76 +240,209 @@ function EventEdit() {
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
+    const sidebarItems: SidebarItem[] = [
+        { id: 'general', label: 'Info Generali', icon: <InfoIcon /> },
+        { id: 'tickets', label: 'Ticketing', icon: <ConfirmationNumberIcon /> },
+        { id: 'checkin', label: 'Check-in', icon: <QrCodeScannerIcon /> },
+    ];
+
+    const handleSidebarChange = (section: string) => {
+        setCurrentSection(section);
+        setDrawerOpen(false);
+    };
+
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={() => navigate('/dashboard')} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
-                    <ArrowBackIcon />
+        <Box sx={styles.root}>
+            {/* Mobile burger */}
+            {isMobile && (
+                <IconButton
+                    onClick={() => setDrawerOpen(true)}
+                    sx={styles.mobileMenuButton}
+                >
+                    <MenuIcon fontSize="small" />
                 </IconButton>
-                <Typography variant="h4" fontWeight="bold">Gestione Evento</Typography>
+            )}
+
+            {/* Mobile drawer */}
+            <Drawer
+                anchor="left"
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                sx={styles.mobileDrawer}
+            >
+                <AppSidebar title="Gestione Evento" items={sidebarItems} activeItem={currentSection} onItemChange={handleSidebarChange} />
+            </Drawer>
+
+            {/* Desktop sidebar */}
+            <Box sx={styles.desktopSidebar}>
+                <AppSidebar title="Gestione Evento" items={sidebarItems} activeItem={currentSection} onItemChange={setCurrentSection} />
             </Box>
 
-            <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 3 }}>
-                    <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }} elevation={0}>
-                        <Tabs orientation="vertical" value={activeTab} onChange={(_e, v) => setActiveTab(v)}
-                            sx={{ borderRight: 1, borderColor: 'divider', minHeight: 200 }}>
-                            <Tab icon={<InfoIcon />} iconPosition="start" label="Info Generali" sx={{ justifyContent: 'flex-start', textTransform: 'none', fontWeight: 'bold' }} />
-                            <Tab icon={<ConfirmationNumberIcon />} iconPosition="start" label="Ticketing" sx={{ justifyContent: 'flex-start', textTransform: 'none', fontWeight: 'bold' }} />
-                            <Tab icon={<QrCodeScannerIcon />} iconPosition="start" label="Check-in" sx={{ justifyContent: 'flex-start', textTransform: 'none', fontWeight: 'bold' }} />
-                        </Tabs>
-                    </Paper>
-                </Grid>
+            {/* Main content */}
+            <Box component="main" sx={styles.mainContent}>
+                <Box sx={styles.contentWrapper}>
+                    <Box sx={styles.headerRow}>
+                        <IconButton onClick={() => navigate(`/dashboard?filter=${filterParam}`)} sx={styles.backButton}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <Typography variant="h4" fontWeight="bold">Gestione Evento</Typography>
+                        {event && (
+                            <Chip
+                                label={{
+                                    DRAFT: 'Bozza', PUBLISHED: 'Pubblicato', TO_BE_REFUNDED: 'Da Rimborsare',
+                                    CONCLUDED: 'Concluso', ARCHIVED: 'Archiviato'
+                                }[event.status as 'DRAFT' | 'PUBLISHED' | 'TO_BE_REFUNDED' | 'CONCLUDED' | 'ARCHIVED'] || event.status}
+                                color={{
+                                    DRAFT: 'default' as const, PUBLISHED: 'success' as const, TO_BE_REFUNDED: 'warning' as const,
+                                    CONCLUDED: 'info' as const, ARCHIVED: 'secondary' as const
+                                }[event.status as 'DRAFT' | 'PUBLISHED' | 'TO_BE_REFUNDED' | 'CONCLUDED' | 'ARCHIVED'] || 'default' as const}
+                                sx={styles.statusChip}
+                            />
+                        )}
+                    </Box>
 
-                <Grid size={{ xs: 12, md: 9 }}>
-                    <Paper sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3, minHeight: 400, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }} elevation={0}>
-                        {activeTab === 0 && (
-                            <Box component="form" onSubmit={handleEventSubmit} sx={{ height: '100%', justifyContent: 'stretch', display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>Informazioni Generali</Typography>
-                                <Grid container spacing={4} sx={{ flexGrow: 1 }}>
+                    <Paper sx={styles.sectionPaper} elevation={0}>
+                        {currentSection === 'general' && (
+                            <Box component="form" onSubmit={handleEventSubmit} sx={styles.formContainer}>
+                                <Typography variant="h5" gutterBottom sx={styles.sectionTitle}>Informazioni Generali</Typography>
+                                <Grid container spacing={4}>
                                     <Grid size={{ xs: 12, md: 7 }}>
-                                        <Stack spacing={3}>
-                                            <TextField required fullWidth label="Titolo Evento" value={title} onChange={(e) => setTitle(e.target.value)} />
-                                            <TextField required fullWidth label="Descrizione" multiline rows={6} value={description} onChange={(e) => setDescription(e.target.value)} />
+                                        <Stack spacing={4}>
+                                            <AppTextField id="event-title-input" required fullWidth label="Titolo Evento" value={title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
+                                            <AppTextField id="event-description-input" required fullWidth label="Descrizione" multiline minRows={1} maxRows={10} value={description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
                                         </Stack>
                                     </Grid>
                                     <Grid size={{ xs: 12, md: 5 }}>
-                                        <Stack spacing={3}>
+                                        <Stack spacing={4}>
                                             <AddressAutocomplete
                                                 value={location}
                                                 onChange={setLocation}
+                                                onLocationSelect={handleLocationSelect}
                                                 label="Luogo"
                                                 placeholder="Cerca un luogo o indirizzo..."
+                                                disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'}
                                             />
-                                            <TextField required fullWidth label="Data e Ora" type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+                                            <AppDateField id="event-date-input" required fullWidth label="Data Evento" type="date" value={eventDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventDate(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
+                                            <Grid container spacing={2}>
+                                                <Grid size={{ xs: 6 }}>
+                                                    <AppDateField id="event-start-time-input" fullWidth label="Ora Inizio" type="time" value={startTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartTime(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
+                                                </Grid>
+                                                <Grid size={{ xs: 6 }}>
+                                                    <AppDateField id="event-end-time-input" fullWidth label="Ora Fine" type="time" value={endTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndTime(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
+                                                </Grid>
+                                            </Grid>
                                         </Stack>
                                     </Grid>
                                 </Grid>
-                                <Box sx={{ mt: 4 }}>
-                                    <Button type="submit" variant="contained" disabled={saving} sx={{ px: 4, textTransform: 'none', borderRadius: 2 }}>
-                                        {saving ? "Salvataggio..." : "Salva Modifiche"}
-                                    </Button>
+
+                                {/* Images & Styling Section */}
+                                <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Immagini e Stile</Typography>
+                                <Grid container spacing={3}>
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Stack spacing={1}>
+                                            <Typography variant="body2" fontWeight="bold">Manifesto (Poster)</Typography>
+                                            {event?.poster_image && <img src={event.poster_image} alt="poster" style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8 }} />}
+                                            <Button variant="outlined" component="label" size="small" sx={{ textTransform: 'none' }} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'}>
+                                                {posterImage ? posterImage.name : 'Carica Poster'}
+                                                <input type="file" hidden accept="image/*" onChange={(e) => setPosterImage(e.target.files?.[0] || null)} />
+                                            </Button>
+                                        </Stack>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Stack spacing={1}>
+                                            <Typography variant="body2" fontWeight="bold">Hero Evento</Typography>
+                                            {event?.hero_image && <img src={event.hero_image} alt="hero" style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8 }} />}
+                                            <Button variant="outlined" component="label" size="small" sx={{ textTransform: 'none' }} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'}>
+                                                {heroImage ? heroImage.name : 'Carica Hero'}
+                                                <input type="file" hidden accept="image/*" onChange={(e) => setHeroImage(e.target.files?.[0] || null)} />
+                                            </Button>
+                                        </Stack>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Stack spacing={1}>
+                                            <Typography variant="body2" fontWeight="bold">Logo Organizzatore</Typography>
+                                            {event?.organizer_logo && <img src={event.organizer_logo} alt="logo" style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'contain', borderRadius: 8 }} />}
+                                            <Button variant="outlined" component="label" size="small" sx={{ textTransform: 'none' }} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'}>
+                                                {organizerLogo ? organizerLogo.name : 'Carica Logo'}
+                                                <input type="file" hidden accept="image/*" onChange={(e) => setOrganizerLogo(e.target.files?.[0] || null)} />
+                                            </Button>
+                                        </Stack>
+                                    </Grid>
+                                </Grid>
+
+                                <Grid container spacing={3} sx={{ mt: 2 }}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Stack spacing={1}>
+                                            <Typography variant="body2" fontWeight="bold">Colore di sfondo</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} style={{ width: 48, height: 36, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
+                                                <Typography variant="body2" color="text.secondary">{backgroundColor}</Typography>
+                                            </Box>
+                                        </Stack>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>Google Wallet Class ID</Typography>
+                                        <Typography variant="body2" color="text.secondary">{event?.google_wallet_class_id || 'Verrà generato al salvataggio'}</Typography>
+                                    </Grid>
+                                </Grid>
+
+                                {/* Ticket Clauses */}
+                                <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Clausole Biglietto</Typography>
+                                <AppTextField id="ticket-clauses-input" fullWidth label="Clausole del Biglietto" multiline minRows={2} maxRows={6} value={ticketClauses} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTicketClauses(e.target.value)} disabled={event?.status === 'CONCLUDED' || event?.status === 'ARCHIVED'} />
+
+                                <Box sx={styles.actionBar}>
+                                    {event?.status !== 'CONCLUDED' && event?.status !== 'ARCHIVED' && (
+                                        <Button type="submit" variant="contained" disabled={saving} sx={styles.saveButton}>
+                                            {saving ? "Salvataggio..." : "Salva Modifiche"}
+                                        </Button>
+                                    )}
+                                    {event?.status === 'DRAFT' && (
+                                        <Button variant="contained" color="success" startIcon={<PublishIcon />} onClick={handlePublish} sx={styles.actionButton}>
+                                            Pubblica Evento
+                                        </Button>
+                                    )}
+                                    {event?.status === 'CONCLUDED' && (
+                                        <Button variant="contained" color="secondary" startIcon={<ArchiveIcon />} onClick={handleArchive} sx={styles.actionButton}>
+                                            Archivia Evento
+                                        </Button>
+                                    )}
+                                    {user?.all_permissions?.includes('events.override_status') && (
+                                        <AppSelectField
+                                            id="admin-status-select"
+                                            labelId="admin-status-label"
+                                            label="Cambio Stato Admin"
+                                            value={event?.status || ''}
+                                            onChange={(e) => handleForceStatus(e.target.value as string)}
+                                            sx={styles.forceStatusControl}
+                                        >
+                                            <MenuItem value="DRAFT">Bozza</MenuItem>
+                                            <MenuItem value="PUBLISHED">Pubblicato</MenuItem>
+                                            <MenuItem value="TO_BE_REFUNDED">Da Rimborsare</MenuItem>
+                                            <MenuItem value="CONCLUDED">Concluso</MenuItem>
+                                            <MenuItem value="ARCHIVED">Archiviato</MenuItem>
+                                        </AppSelectField>
+                                    )}
                                 </Box>
                             </Box>
                         )}
 
-                        {activeTab === 1 && (
+                        {currentSection === 'tickets' && (
                             <Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                                <Box sx={styles.ticketsHeader}>
                                     <Typography variant="h5" fontWeight="bold">Gestione Biglietti</Typography>
-                                    <Button variant="contained" color="warning" startIcon={<AddIcon />} onClick={() => handleOpenCategoryDialog()} sx={{ textTransform: 'none', borderRadius: 2 }}>
+                                    <Button variant="contained" color="warning" startIcon={<AddIcon />} onClick={() => handleOpenCategoryDialog()} sx={styles.actionButton}>
                                         Nuova Categoria
                                     </Button>
                                 </Box>
                                 <Grid container spacing={2}>
                                     {categories.map((cat: any) => (
                                         <Grid size={{ xs: 12, sm: 6 }} key={cat.id}>
-                                            <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                                            <Card variant="outlined" sx={styles.categoryCard}>
                                                 <CardContent>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <Box sx={styles.categoryCardContent}>
                                                         <Box>
                                                             <Typography variant="h6">{cat.name}</Typography>
-                                                            <Typography variant="h5" color="primary" fontWeight="bold">{parseFloat(cat.price).toFixed(2)}€</Typography>
+                                                            <Typography variant="h5" sx={styles.categoryPrice}>{parseFloat(cat.price).toFixed(2)}€</Typography>
                                                             <Typography variant="body2" color="text.secondary">Disponibilità: {cat.remaining_quantity} / {cat.total_quantity}</Typography>
                                                         </Box>
                                                         <Stack direction="row" spacing={1}>
@@ -239,26 +459,26 @@ function EventEdit() {
                             </Box>
                         )}
 
-                        {activeTab === 2 && (
+                        {currentSection === 'checkin' && (
                             <Box>
                                 <Typography variant="h5" gutterBottom fontWeight="bold">Validazione Ingressi</Typography>
                                 <Grid container spacing={4} sx={{ mt: 1 }}>
                                     <Grid size={{ xs: 12, md: 5 }}>
                                         <Button fullWidth variant="contained" color="secondary" startIcon={<QrCodeScannerIcon />} onClick={startScanner}
-                                            sx={{ py: 2, mb: 3, textTransform: 'none', fontSize: '1.1rem', borderRadius: 2 }}>
+                                            sx={styles.scannerButton}>
                                             Avvia Scanner QR
                                         </Button>
-                                        <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderRadius: 2 }}>
+                                        <Paper variant="outlined" sx={styles.scannerPaper}>
                                             <Typography variant="body2" color="text.secondary">Utilizza la fotocamera per scansionare i biglietti dei partecipanti all'ingresso.</Typography>
                                         </Paper>
                                     </Grid>
                                     <Grid size={{ xs: 12, md: 7 }}>
                                         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Partecipanti ({attendees.length})</Typography>
-                                        <List sx={{ maxHeight: 500, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                                        <List sx={styles.attendeesList}>
                                             {attendees.map((t: any) => (
                                                 <ListItem key={t.id} divider secondaryAction={
                                                     !t.is_checked_in ? (
-                                                        <Button size="small" variant="outlined" onClick={() => validateTicket(t.id, false)} sx={{ textTransform: 'none', borderRadius: 2 }}>Valida</Button>
+                                                        <Button size="small" variant="outlined" onClick={() => validateTicket(t.id, false)} sx={styles.validateButton}>Valida</Button>
                                                     ) : (
                                                         <Chip size="small" label="Validato" color="success" icon={<CheckCircleIcon />} />
                                                     )
@@ -273,20 +493,20 @@ function EventEdit() {
                             </Box>
                         )}
                     </Paper>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
             {/* Category Dialog */}
             <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} fullWidth maxWidth="xs">
                 <DialogTitle>{editingCategory ? "Modifica Categoria" : "Nuova Categoria"}</DialogTitle>
                 <DialogContent>
-                    <TextField fullWidth label="Nome" margin="normal" value={catName} onChange={(e) => setCatName(e.target.value)} />
-                    <TextField fullWidth label="Prezzo (€)" type="number" margin="normal" value={catPrice} onChange={(e) => setCatPrice(e.target.value)} />
-                    <TextField fullWidth label="Quantità Totale" type="number" margin="normal" value={catQty} onChange={(e) => setCatQty(e.target.value)} />
+                    <AppTextField fullWidth label="Nome" margin="normal" value={catName} onChange={(e: any) => setCatName(e.target.value)} />
+                    <AppTextField fullWidth label="Prezzo (€)" type="number" margin="normal" value={catPrice} onChange={(e: any) => setCatPrice(e.target.value)} />
+                    <AppTextField fullWidth label="Quantità Totale" type="number" margin="normal" value={catQty} onChange={(e: any) => setCatQty(e.target.value)} />
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setCategoryDialogOpen(false)} sx={{ textTransform: 'none' }}>Annulla</Button>
-                    <Button onClick={handleCategorySubmit} variant="contained" color="warning" sx={{ textTransform: 'none' }}>
+                <DialogActions sx={styles.dialogActions}>
+                    <Button onClick={() => setCategoryDialogOpen(false)} sx={styles.cancelButton}>Annulla</Button>
+                    <Button onClick={handleCategorySubmit} variant="contained" color="warning" sx={styles.submitButton}>
                         {editingCategory ? "Aggiorna" : "Crea"}
                     </Button>
                 </DialogActions>
@@ -296,13 +516,13 @@ function EventEdit() {
             <Dialog open={scannerOpen} onClose={stopScanner} fullWidth maxWidth="xs">
                 <DialogTitle>Scansiona Biglietto</DialogTitle>
                 <DialogContent><Box id="reader" sx={{ width: '100%' }}></Box></DialogContent>
-                <DialogActions><Button onClick={stopScanner} sx={{ textTransform: 'none' }}>Chiudi</Button></DialogActions>
+                <DialogActions><Button onClick={stopScanner} sx={styles.cancelButton}>Chiudi</Button></DialogActions>
             </Dialog>
 
             <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
                 <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity as any} sx={{ width: '100%' }}>{snackbar.message}</Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }
 

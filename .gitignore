@@ -16,3 +16,8 @@ backend/db.sqlite3
 
 # Node modules
 node_modules/
+
+# AI Agents
+.agents/
+.agent/
+skills-lock.json

@@ -20,6 +20,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MenuIcon from '@mui/icons-material/Menu';
 import LinkIcon from '@mui/icons-material/Link';
+import TicketCard from '../components/TicketCard';
 
 function Profile() {
     const theme = useTheme();
@@ -314,17 +315,8 @@ function Profile() {
             ) : (
                 <Grid container spacing={2}>
                     {myTickets.map((ticket: any) => (
-                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={ticket.id}>
-                            <Card variant="outlined" sx={{ borderRadius: 3, transition: 'all 0.2s', '&:hover': { boxShadow: 4 } }}>
-                                <CardContent sx={{ p: 3 }}>
-                                    <Typography variant="subtitle1" fontWeight="bold" noWrap>{ticket.event_title || 'Evento'}</Typography>
-                                    <Chip label={ticket.category_name} size="small" color="primary" variant="outlined" sx={{ mt: 1, mb: 2 }} />
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        Codice: <strong>{ticket.ticket_code?.substring(0, 12)}...</strong>
-                                    </Typography>
-                                    {ticket.is_checked_in && <Chip label="✓ Validato" size="small" color="success" sx={{ mt: 1 }} />}
-                                </CardContent>
-                            </Card>
+                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} key={ticket.id}>
+                            <TicketCard ticket={ticket} />
                         </Grid>
                     ))}
                 </Grid>

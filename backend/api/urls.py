@@ -9,6 +9,7 @@ urlpatterns = [
     path("event/<int:pk>/", views.EventDetail.as_view(), name="event-detail"),
     path("event/delete/<int:pk>/", views.EventDelete.as_view(), name="event-delete"),
     path("event/update/<int:pk>/", views.EventUpdate.as_view(), name="event-update"),
+    path("event/<int:pk>/force-status/", views.EventForceStatusView.as_view(), name="event-force-status"),
     path("user/profile/", views.UserProfileView.as_view(), name="user-profile"),
     path("user/onboarding/", views.OnboardingView.as_view(), name="user-onboarding"),
     path("roles/", views.RoleListCreate.as_view(), name="role-list"),
@@ -23,6 +24,8 @@ urlpatterns = [
     path("tickets/purchase/", views.TicketPurchaseView.as_view(), name="ticket-purchase"),
     path("tickets/my/", views.UserTicketsListView.as_view(), name="user-tickets"),
     path("tickets/event/<int:event_id>/", views.EventTicketsListView.as_view(), name="event-tickets"),
+    path("tickets/<int:pk>/download/pdf/", views.TicketDownloadPDFView.as_view(), name="ticket-download-pdf"),
+    path("tickets/<int:pk>/download/google/", views.TicketDownloadGoogleWalletView.as_view(), name="ticket-download-google"),
     path("tickets/validate/", views.TicketValidationView.as_view(), name="ticket-validate"),
     path("user/admin-onboarding/", views.AdminOnboardingView.as_view(), name="admin-onboarding"),
 ]

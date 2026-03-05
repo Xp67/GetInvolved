@@ -261,10 +261,17 @@ class TicketSerializer(serializers.ModelSerializer):
     owner_name = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     event_id = serializers.IntegerField(source='category.event.id', read_only=True)
+    event_title = serializers.CharField(source='category.event.title', read_only=True)
+    event_date = serializers.DateField(source='category.event.date', read_only=True)
+    event_start_time = serializers.TimeField(source='category.event.start_time', read_only=True)
+    event_location = serializers.CharField(source='category.event.location', read_only=True)
 
     class Meta:
         model = Ticket
-        fields = ['id', 'category', 'category_name', 'event_id', 'owner', 'owner_email', 'owner_name', 'ticket_code', 'is_checked_in', 'checked_in_at', 'purchase_date']
+        fields = [
+            'id', 'category', 'category_name', 'event_id', 'event_title', 'event_date', 'event_start_time', 'event_location',
+            'owner', 'owner_email', 'owner_name', 'ticket_code', 'is_checked_in', 'checked_in_at', 'purchase_date'
+        ]
         read_only_fields = ['owner', 'ticket_code', 'is_checked_in', 'checked_in_at', 'purchase_date']
 
     def get_owner_name(self, obj):
@@ -276,11 +283,57 @@ class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'title', 'description', 'location', 'event_date', 'organizer', 'organizer_name', 'created_at', 'ticket_categories']
-        read_only_fields = ['organizer', 'created_at']
+        fields = [
+            'id', 'title', 'description', 'location',
+            'latitude', 'longitude', 'country_code',
+            'date', 'start_time', 'end_time',
+            'poster_image', 'hero_image', 'organizer_logo',
+            'background_color', 'google_wallet_class_id', 'ticket_clauses',
+            'status', 'organizer', 'organizer_name', 'created_at', 'ticket_categories',
+        ]
+        read_only_fields = ['organizer', 'created_at', 'google_wallet_class_id']
 
     def get_organizer_name(self, obj):
         return f"{obj.organizer.first_name} {obj.organizer.last_name}".strip() or obj.organizer.username
+
+    def validate(self, data):
+        instance = self.instance
+        new_status = data.get('status')
+
+        # Block edits on CONCLUDED / ARCHIVED events (unless admin override via context)
+        is_admin_override = self.context.get('admin_override', False)
+        if instance and instance.status in ('CONCLUDED', 'ARCHIVED') and not is_admin_override:
+            raise serializers.ValidationError("Non è possibile modificare un evento concluso o archiviato.")
+
+        # Validation for publishing
+        if new_status == 'PUBLISHED':
+            title = data.get('title', getattr(instance, 'title', ''))
+            description = data.get('description', getattr(instance, 'description', ''))
+            location = data.get('location', getattr(instance, 'location', ''))
+            event_date = data.get('date', getattr(instance, 'date', None))
+
+            errors = {}
+            if not title or not title.strip():
+                errors['title'] = "Il titolo è obbligatorio per pubblicare."
+            if not description or not description.strip():
+                errors['description'] = "La descrizione è obbligatoria per pubblicare."
+            if not location or not location.strip():
+                errors['location'] = "La location è obbligatoria per pubblicare."
+            if not event_date:
+                errors['date'] = "La data evento è obbligatoria per pubblicare."
+
+            # Check at least 1 ticket category exists
+            if instance and not instance.ticket_categories.exists():
+                errors['ticket_categories'] = "Deve esistere almeno una categoria di biglietti per pubblicare."
+
+            if errors and not is_admin_override:
+                raise serializers.ValidationError(errors)
+
+        # ARCHIVED only from CONCLUDED
+        if new_status == 'ARCHIVED' and instance and instance.status != 'CONCLUDED' and not is_admin_override:
+            raise serializers.ValidationError("Un evento può essere archiviato solo se è concluso.")
+
+        return data
 
     def create(self, validated_data):
         event = Event.objects.create(**validated_data)

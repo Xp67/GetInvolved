@@ -62,7 +62,8 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'corsheaders',
-    'whitenoise.runserver_nostatic'
+    'whitenoise.runserver_nostatic',
+    'django_apscheduler',
 ]
 
 MIDDLEWARE = [

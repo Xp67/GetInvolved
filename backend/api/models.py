@@ -6,6 +6,7 @@ from django.dispatch import receiver
 import string
 import secrets
 import uuid
+import re
 
 # Create your models here.
 
@@ -123,16 +124,66 @@ class OrganizerProfile(models.Model):
     def __str__(self):
         return f"OrganizerProfile for {self.user.email}"
 
+def generate_wallet_class_id(title):
+    """Generate a Google Wallet class ID from event title + 8 random alphanumeric chars."""
+    clean = re.sub(r'[^a-zA-Z0-9]', '', title.lower())
+    if not clean:
+        clean = 'event'
+    random_part = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(8))
+    return f"{clean}_{random_part}"
+
+
 class Event(models.Model):
+    STATUS_CHOICES = [
+        ('DRAFT', 'Bozza'),
+        ('PUBLISHED', 'Pubblicato'),
+        ('TO_BE_REFUNDED', 'Da Rimborsare'),
+        ('CONCLUDED', 'Concluso'),
+        ('ARCHIVED', 'Archiviato'),
+    ]
+
     title = models.CharField(max_length=100)
-    description = models.TextField()
-    location = models.CharField(max_length=200)
-    event_date = models.DateTimeField(null=True, blank=True)
+    description = models.TextField(blank=True, default='')
+    location = models.CharField(max_length=200, blank=True, default='')
+
+    # Location metadata (auto-filled from AddressAutocomplete)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    country_code = models.CharField(max_length=2, blank=True, default='')
+
+    # Date & Time (separated)
+    date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+
+    # Images
+    poster_image = models.ImageField(upload_to='events/posters/', null=True, blank=True)
+    hero_image = models.ImageField(upload_to='events/heroes/', null=True, blank=True)
+    organizer_logo = models.ImageField(upload_to='events/logos/', null=True, blank=True)
+
+    # Styling
+    background_color = models.CharField(max_length=7, default='#FFFFFF')
+
+    # Google Wallet
+    google_wallet_class_id = models.CharField(max_length=200, unique=True, blank=True)
+
+    # Ticket clauses
+    ticket_clauses = models.TextField(blank=True, default='')
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
     created_at = models.DateTimeField(auto_now_add=True)
     organizer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organized_events')
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.google_wallet_class_id:
+            self.google_wallet_class_id = generate_wallet_class_id(self.title)
+            # Ensure uniqueness
+            while Event.objects.filter(google_wallet_class_id=self.google_wallet_class_id).exists():
+                self.google_wallet_class_id = generate_wallet_class_id(self.title)
+        super().save(*args, **kwargs)
 
 class TicketCategory(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='ticket_categories')

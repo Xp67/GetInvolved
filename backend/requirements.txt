@@ -11,3 +11,7 @@ python-dotenv
 gunicorn
 whitenoise
 pillow
+google-cloud-secret-manager 
+qrcode
+reportlab
+django-apache-scheduler
