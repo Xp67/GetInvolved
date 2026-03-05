@@ -15,8 +15,23 @@ import PersonIcon from '@mui/icons-material/Person';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LocalActivityIcon from '@mui/icons-material/LocalActivity';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import CloseIcon from '@mui/icons-material/Close';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import TicketCard from '../components/TicketCard';
 import type { SxProps, Theme } from '@mui/material';
+
+const getContrastColor = (hex: string) => {
+    if (!hex) return '#000000';
+    if (hex.indexOf('#') === 0) hex = hex.slice(1);
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    if (hex.length !== 6) return '#000000';
+    const r = parseInt(hex.slice(0, 2), 16),
+        g = parseInt(hex.slice(2, 4), 16),
+        b = parseInt(hex.slice(4, 6), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) > 186 ? '#000000' : '#FFFFFF';
+};
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -100,6 +115,8 @@ function EventDetail() {
     const [selectedCategory, setSelectedCategory] = useState<any>(null);
     const [myTickets, setMyTickets] = useState<any[]>([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+    const [posterZoomOpen, setPosterZoomOpen] = useState(false);
+    const [posterScale, setPosterScale] = useState(1);
     const isLoggedIn = !!localStorage.getItem(ACCESS_TOKEN);
 
     useEffect(() => {
@@ -159,16 +176,13 @@ function EventDetail() {
     return (
         <Box sx={{
             ...styles.pageWrapper,
-            background: `linear-gradient(180deg, ${bgColor}22 0%, ${bgColor}08 40%, transparent 80%)`,
+            background: `linear-gradient(180deg, ${bgColor}88 0%, ${bgColor}33 30%, transparent 80%)`,
         }}>
             <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 } }}>
-                <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={() => navigate('/')} sx={{ mr: 2, bgcolor: 'background.paper', boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
-                        <ArrowBackIcon />
-                    </IconButton>
-                    <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-                        Dettaglio Evento
-                    </Typography>
+                <Box sx={{ mb: 2 }}>
+                    <Button onClick={() => navigate('/')} startIcon={<ArrowBackIcon />} variant="text" sx={{ color: 'text.secondary', fontWeight: 'bold', '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}>
+                        Indietro
+                    </Button>
                 </Box>
 
                 <Grid container spacing={4}>
@@ -210,34 +224,63 @@ function EventDetail() {
                                         component="img"
                                         src={posterUrl}
                                         alt="Poster evento"
-                                        sx={styles.posterImage}
+                                        sx={{ ...styles.posterImage, cursor: 'zoom-in', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}
+                                        onClick={() => {
+                                            setPosterScale(1);
+                                            setPosterZoomOpen(true);
+                                        }}
                                     />
                                 )}
 
                                 {/* Info + Description */}
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Stack direction="row" spacing={1} sx={{ mb: 2.5 }} flexWrap="wrap" useFlexGap>
-                                        <Chip
-                                            avatar={logoUrl ? <Avatar src={logoUrl} /> : undefined}
-                                            icon={!logoUrl ? <PersonIcon /> : undefined}
-                                            label={`Organizzato da: ${event.organizer_name}`}
-                                            variant="outlined"
-                                        />
-                                        <Chip
-                                            icon={<CalendarTodayIcon />}
-                                            label={event.date
-                                                ? new Date(event.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
-                                                : 'Data non impostata'}
-                                            variant="outlined"
-                                        />
-                                        {event.start_time && (
-                                            <Chip icon={<AccessTimeIcon />} label={event.start_time.substring(0, 5)} variant="outlined" />
-                                        )}
-                                        {event.end_time && (
-                                            <Chip icon={<AccessTimeIcon />} label={`Fino alle ${event.end_time.substring(0, 5)}`} variant="outlined" />
-                                        )}
-                                        <Chip icon={<LocationOnIcon />} label={event.location} color="primary" />
-                                    </Stack>
+
+                                    <Box sx={{ mb: 4 }}>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
+                                            Organizzato da
+                                        </Typography>
+                                        <Stack direction="row" spacing={2} alignItems="center">
+                                            {logoUrl ? <Avatar src={logoUrl} sx={{ width: 48, height: 48 }} /> : <Avatar sx={{ width: 48, height: 48 }}><PersonIcon /></Avatar>}
+                                            <Typography variant="h6" fontWeight="bold">{event.organizer_name}</Typography>
+                                        </Stack>
+                                    </Box>
+
+                                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Stack direction="row" spacing={2}>
+                                                <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'flex-start', pt: 0.5 }}>
+                                                    <CalendarTodayIcon />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>Data e Ora</Typography>
+                                                    <Typography variant="body1" fontWeight="medium">
+                                                        {event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Data non impostata'}
+                                                    </Typography>
+                                                    {(event.start_time || event.end_time) && (
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {event.start_time ? event.start_time.substring(0, 5) : ''}
+                                                            {event.end_time ? ` - ${event.end_time.substring(0, 5)}` : ''}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </Stack>
+                                        </Grid>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Stack direction="row" spacing={2}>
+                                                <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'flex-start', pt: 0.5 }}>
+                                                    <LocationOnIcon />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>Luogo</Typography>
+                                                    <Typography variant="body1" fontWeight="medium">
+                                                        {event.location}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                        </Grid>
+                                    </Grid>
+
+                                    <Divider sx={{ mb: 4 }} />
 
                                     <Typography variant="h6" fontWeight="bold" gutterBottom>Descrizione</Typography>
                                     <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.8 }}>
@@ -265,9 +308,10 @@ function EventDetail() {
                     {/* Ticket Sidebar */}
                     <Grid size={{ xs: 12, md: 4 }}>
                         <Paper sx={styles.ticketSidebar} elevation={0}>
-                            <Box sx={{ bgcolor: bgColor !== '#FFFFFF' ? bgColor : 'primary.main', color: 'primary.contrastText', p: 3 }}>
-                                <Typography variant="h6" fontWeight="bold" sx={{ color: bgColor !== '#FFFFFF' ? '#fff' : undefined, textShadow: bgColor !== '#FFFFFF' ? '0 1px 4px rgba(0,0,0,0.3)' : undefined }}>
-                                    🎟️ Biglietti
+                            <Box sx={{ bgcolor: bgColor !== '#FFFFFF' ? bgColor : 'primary.main', color: bgColor !== '#FFFFFF' ? getContrastColor(bgColor) : 'primary.contrastText', p: 3, display: 'flex', alignItems: 'center' }}>
+                                <LocalActivityIcon sx={{ mr: 1.5, color: 'inherit' }} />
+                                <Typography variant="h6" fontWeight="bold" sx={{ color: 'inherit', textShadow: bgColor !== '#FFFFFF' ? (getContrastColor(bgColor) === '#FFFFFF' ? '0 1px 4px rgba(0,0,0,0.3)' : 'none') : undefined }}>
+                                    Biglietti
                                 </Typography>
                             </Box>
                             <Box sx={{ p: 3 }}>
@@ -353,6 +397,37 @@ function EventDetail() {
                             <Button onClick={() => navigate(`/login?redirect=/event/${id}`)} variant="contained" sx={{ textTransform: 'none' }}>Accedi</Button>
                         )}
                     </DialogActions>
+                </Dialog>
+
+                {/* Poster Zoom Dialog */}
+                <Dialog
+                    open={posterZoomOpen}
+                    onClose={() => setPosterZoomOpen(false)}
+                    maxWidth="md"
+                    PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'hidden' } }}
+                >
+                    <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+                        <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10, display: 'flex', gap: 1, bgcolor: 'rgba(0,0,0,0.6)', borderRadius: 2, p: 0.5 }}>
+                            <IconButton onClick={() => setPosterScale(s => Math.max(0.5, s - 0.25))} sx={{ color: 'white' }}><ZoomOutIcon /></IconButton>
+                            <IconButton onClick={() => setPosterScale(1)} sx={{ color: 'white' }}><RestartAltIcon /></IconButton>
+                            <IconButton onClick={() => setPosterScale(s => Math.min(3, s + 0.25))} sx={{ color: 'white' }}><ZoomInIcon /></IconButton>
+                            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.3)', mx: 0.5 }} />
+                            <IconButton onClick={() => setPosterZoomOpen(false)} sx={{ color: 'white' }}><CloseIcon /></IconButton>
+                        </Box>
+                        <Box
+                            component="img"
+                            src={posterUrl || ''}
+                            alt="Poster Ingrandito"
+                            sx={{
+                                maxHeight: '90vh',
+                                maxWidth: '100%',
+                                objectFit: 'contain',
+                                transform: `scale(${posterScale})`,
+                                transition: 'transform 0.2s',
+                                borderRadius: 1
+                            }}
+                        />
+                    </Box>
                 </Dialog>
 
                 <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>

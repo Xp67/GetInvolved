@@ -1,41 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api";
-import Event from "../components/Event";
 import AppSidebar from "../components/Sidebar";
-import type { SidebarItem } from "../components/Sidebar";
-import RolesManagement from "../components/RolesManagement";
-import UsersManagement from "../components/UsersManagement";
-import AddressAutocomplete from "../components/AddressAutocomplete";
-import type { LocationData } from "../components/AddressAutocomplete";
-import { hasPermission as checkPerm, canAccessSection, AppUser } from "../utils/permissionUtils";
+import { AppUser, hasPermission as checkPermission } from "../utils/permissionUtils";
 import {
-    Typography,
-    TextField,
-    Button,
     Box,
-    Grid,
-    Paper,
-    Divider,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     IconButton,
-    Snackbar,
-    Alert,
-    Stack,
+    Drawer,
+    CircularProgress,
     useTheme,
     useMediaQuery,
-    Drawer,
-    Tabs,
-    Tab,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
-import EventIcon from "@mui/icons-material/Event";
-import PeopleIcon from "@mui/icons-material/People";
-import SecurityIcon from "@mui/icons-material/Security";
+import { DashboardConfig } from "./sections/config/DashboardConfig";
 
 function Dashboard() {
     const theme = useTheme();
@@ -46,21 +23,14 @@ function Dashboard() {
     const [user, setUser] = useState<AppUser | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Event state
+    // Event state for events section (passed as props)
     const [events, setEvents] = useState<any[]>([]);
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [location, setLocation] = useState("");
-    const [latitude, setLatitude] = useState<number | null>(null);
-    const [longitude, setLongitude] = useState<number | null>(null);
-    const [countryCode, setCountryCode] = useState("");
-    const [eventDate, setEventDate] = useState("");
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
-    const [open, setOpen] = useState(false);
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [searchParams] = useSearchParams();
     const [eventFilter, setEventFilter] = useState(searchParams.get('filter') || 'active');
+
+    const config = DashboardConfig(user);
+    const activeSection = config.find(s => s.id === currentSection);
+    const ActiveComponent = activeSection?.component;
 
     useEffect(() => {
         fetchUser();
@@ -83,214 +53,23 @@ function Dashboard() {
         }
     };
 
-    const hasPermission = (perm: string) => checkPerm(user, perm);
-
-    const handleOpen = () => {
-        setTitle("");
-        setDescription("");
-        setLocation("");
-        setLatitude(null);
-        setLongitude(null);
-        setCountryCode("");
-        setEventDate("");
-        setStartTime("");
-        setEndTime("");
-        setOpen(true);
-    };
-
-    const handleEditOpen = (event: any) => {
-        navigate(`/dashboard/eventi/${event.id}/edit?filter=${eventFilter}`);
-    };
-
-    const handleViewOpen = (event: any) => {
-        navigate(`/dashboard/eventi/${event.id}?filter=${eventFilter}`);
-    };
-
-    const handleClose = () => {
-        setOpen(false);
-        setTitle("");
-        setDescription("");
-        setLocation("");
-        setLatitude(null);
-        setLongitude(null);
-        setCountryCode("");
-        setEventDate("");
-        setStartTime("");
-        setEndTime("");
-    };
-
-    const handleLocationSelect = (data: LocationData) => {
-        setLocation(data.address);
-        setLatitude(data.latitude);
-        setLongitude(data.longitude);
-        setCountryCode(data.country_code);
-    };
-
     const getEvents = () => {
         api
             .get("/api/event/")
             .then((res) => res.data)
             .then((data) => setEvents(data))
-            .catch((error) => alert(error));
+            .catch((error) => console.error(error));
     };
 
-    const deleteEvent = (id: number) => {
-        api
-            .delete(`/api/event/delete/${id}/`)
-            .then((res) => {
-                if (res.status === 204) getEvents();
-                else alert("Error deleting event");
-            })
-            .catch((error) => {
-                const msg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
-                alert(msg);
-            });
-    };
-
-    const archiveEvent = (event: any) => {
-        if (!window.confirm(`Sei sicuro di voler archiviare l'evento "${event.title}"?`)) return;
-        api.patch(`/api/event/update/${event.id}/`, { status: 'ARCHIVED' })
-            .then(() => getEvents())
-            .catch((error) => alert(error.response?.data?.detail || 'Errore durante l\'archiviazione'));
-    };
-
-    const forceStatus = (eventId: number, newStatus: string) => {
-        api.patch(`/api/event/${eventId}/force-status/`, { status: newStatus })
-            .then(() => getEvents())
-            .catch((error) => alert(error.response?.data?.error || 'Errore nel cambio stato'));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        createEvent();
-    };
-
-    const createEvent = () => {
-        const eventData: any = {
-            title,
-            description,
-            location,
-            date: eventDate || null,
-            start_time: startTime || null,
-            end_time: endTime || null,
-        };
-        if (latitude !== null) eventData.latitude = latitude;
-        if (longitude !== null) eventData.longitude = longitude;
-        if (countryCode) eventData.country_code = countryCode;
-        api
-            .post("/api/event/", eventData)
-            .then((res) => {
-                if (res.status === 201) {
-                    handleClose();
-                    getEvents();
-                } else alert("Error creating event");
-            })
-            .catch((error) => alert(error));
-    };
-
-    const renderSection = () => {
-        switch (currentSection) {
-            case 'eventi': {
-                const filteredEvents = events.filter((e: any) => {
-                    if (eventFilter === 'active') return ['PUBLISHED', 'TO_BE_REFUNDED', 'CONCLUDED'].includes(e.status);
-                    if (eventFilter === 'drafts') return e.status === 'DRAFT';
-                    if (eventFilter === 'archived') return e.status === 'ARCHIVED';
-                    return true;
-                });
-                return (
-                    <>
-                        <Grid container spacing={4}>
-                            <Grid size={12}>
-                                <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }} elevation={0}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="h6">
-                                            {hasPermission('events.view_all') ? 'Tutti gli Eventi' : 'I Tuoi Eventi'}
-                                        </Typography>
-                                        <Tabs value={eventFilter} onChange={(_e, v) => setEventFilter(v)} sx={{ minHeight: 36 }}>
-                                            <Tab value="active" label="Attivi" sx={{ textTransform: 'none', minHeight: 36, py: 0 }} />
-                                            <Tab value="drafts" label="Bozze" sx={{ textTransform: 'none', minHeight: 36, py: 0 }} />
-                                            <Tab value="archived" label="Archiviati" sx={{ textTransform: 'none', minHeight: 36, py: 0 }} />
-                                        </Tabs>
-                                    </Box>
-                                    <Divider sx={{ mb: 3 }} />
-                                    {filteredEvents.length === 0 ? (
-                                        <Box sx={{ py: 6, textAlign: 'center' }}>
-                                            <Typography color="text.secondary" gutterBottom>Non ci sono eventi in questa sezione.</Typography>
-                                            {hasPermission('events.create') && eventFilter === 'drafts' && (
-                                                <Button variant="outlined" sx={{ mt: 2, textTransform: 'none', borderRadius: 2 }} onClick={handleOpen}>
-                                                    Crea il tuo primo evento
-                                                </Button>
-                                            )}
-                                        </Box>
-                                    ) : (
-                                        <Grid container spacing={3}>
-                                            {filteredEvents.map((event: any) => (
-                                                <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={event.id}>
-                                                    <Event
-                                                        event={event}
-                                                        onDelete={deleteEvent}
-                                                        onEdit={handleEditOpen}
-                                                        onView={handleViewOpen}
-                                                        onArchive={archiveEvent}
-                                                        canDelete={hasPermission('events.delete_all') || (hasPermission('events.delete_own') && event.organizer === user?.id)}
-                                                        canEdit={hasPermission('events.edit_all') || (hasPermission('events.edit_own') && event.organizer === user?.id)}
-                                                    />
-                                                    {hasPermission('events.override_status') && (
-                                                        <Box sx={{ mt: -1, mb: 2, px: 1 }}>
-                                                            <select
-                                                                value={event.status}
-                                                                onChange={(e) => forceStatus(event.id, e.target.value)}
-                                                                style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #ccc', fontSize: '0.8rem', cursor: 'pointer' }}
-                                                            >
-                                                                <option value="DRAFT">🟡 Bozza</option>
-                                                                <option value="PUBLISHED">🟢 Pubblicato</option>
-                                                                <option value="TO_BE_REFUNDED">🟠 Da Rimborsare</option>
-                                                                <option value="CONCLUDED">🔵 Concluso</option>
-                                                                <option value="ARCHIVED">⚫ Archiviato</option>
-                                                            </select>
-                                                        </Box>
-                                                    )}
-                                                </Grid>
-                                            ))}
-                                        </Grid>
-                                    )}
-                                </Paper>
-                            </Grid>
-                        </Grid>
-                    </>
-                );
-            }
-            case 'utenti':
-                return <UsersManagement userPermissions={user?.all_permissions} />;
-            case 'ruoli':
-                return <RolesManagement userPermissions={user?.all_permissions} />;
-            default:
-                return <Typography variant="h4">Sezione non trovata</Typography>;
-        }
-    };
+    const hasPermission = (perm: string) => checkPermission(user, perm);
 
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <Typography variant="h6">Caricamento Dashboard...</Typography>
+                <CircularProgress />
             </Box>
         );
     }
-
-    const getSectionTitle = () => {
-        switch (currentSection) {
-            case 'eventi': return "Dashboard Eventi";
-            case 'utenti': return "Gestione Utenti";
-            case 'ruoli': return "Gestione Ruoli e Permessi";
-            default: return "";
-        }
-    };
-
-    const sidebarItems: SidebarItem[] = [
-        { id: 'eventi', label: 'Eventi', icon: <EventIcon />, show: canAccessSection(user, 'eventi') },
-        { id: 'utenti', label: 'Utenti', icon: <PeopleIcon />, show: canAccessSection(user, 'utenti') },
-        { id: 'ruoli', label: 'Ruoli e Permessi', icon: <SecurityIcon />, show: canAccessSection(user, 'ruoli') },
-    ];
 
     const handleSidebarChange = (section: string) => {
         setCurrentSection(section);
@@ -316,7 +95,7 @@ function Dashboard() {
                 onClose={() => setDrawerOpen(false)}
                 sx={{ display: { xs: 'block', md: 'none' }, '& .MuiDrawer-paper': { width: 300 } }}
             >
-                <AppSidebar title="Dashboard" items={sidebarItems} activeItem={currentSection} onItemChange={handleSidebarChange} />
+                <AppSidebar title="Dashboard" items={config} activeItem={currentSection} onItemChange={handleSidebarChange} />
             </Drawer>
 
             {/* Desktop sidebar */}
@@ -324,63 +103,26 @@ function Dashboard() {
                 width: 300, minWidth: 300, flexShrink: 0, bgcolor: 'background.paper', borderRight: '1px solid', borderColor: 'divider',
                 display: { xs: 'none', md: 'block' }, position: 'sticky', top: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', zIndex: 10
             }}>
-                <AppSidebar title="Dashboard" items={sidebarItems} activeItem={currentSection} onItemChange={setCurrentSection} />
+                <AppSidebar title="Dashboard" items={config} activeItem={currentSection} onItemChange={setCurrentSection} />
             </Box>
 
             {/* Main content */}
             <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { xs: 10, sm: 3, md: 4 }, overflowY: 'auto' }}>
                 <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                        <Typography variant="h4" fontWeight="bold">
-                            {getSectionTitle()}
-                        </Typography>
-                        {currentSection === 'eventi' && hasPermission('events.create') && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleOpen}
-                                sx={{ textTransform: 'none', px: 4, borderRadius: 2, boxShadow: 2 }}
-                            >
-                                Crea Evento
-                            </Button>
-                        )}
-                    </Box>
-                    {renderSection()}
+                    {ActiveComponent && (
+                        <ActiveComponent
+                            events={events}
+                            user={user}
+                            hasPermission={hasPermission}
+                            getEvents={getEvents}
+                            eventFilter={eventFilter}
+                            setEventFilter={setEventFilter}
+                            navigate={navigate}
+                            userPermissions={user?.all_permissions}
+                        />
+                    )}
                 </Box>
-
             </Box>
-
-            {/* Dialog Creazione Evento */}
-            <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ m: 0, px: 3, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="bold">Crea Nuovo Evento</Typography>
-                    <IconButton aria-label="close" onClick={handleClose} size="small" sx={{ color: 'text.secondary' }}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent dividers sx={{ px: 3, py: 3 }}>
-                    <Box component="form" id="create-event-form" onSubmit={handleSubmit} noValidate>
-                        <Stack spacing={2.5}>
-                            <TextField required fullWidth id="title" label="Titolo Evento" name="title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-                            <TextField required fullWidth id="description" label="Descrizione" name="description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-                            <AddressAutocomplete value={location} onChange={setLocation} onLocationSelect={handleLocationSelect} label="Luogo" placeholder="Cerca un luogo o indirizzo..." />
-                            <TextField required fullWidth id="event_date" label="Data Evento" name="event_date" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-                            <Stack direction="row" spacing={2}>
-                                <TextField fullWidth id="start_time" label="Ora Inizio" name="start_time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} />
-                                <TextField fullWidth id="end_time" label="Ora Fine" name="end_time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} />
-                            </Stack>
-                        </Stack>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button onClick={handleClose} sx={{ textTransform: 'none', color: 'text.secondary' }}>Annulla</Button>
-                    <Button type="submit" form="create-event-form" variant="contained" sx={{ textTransform: 'none', borderRadius: 2, px: 4, fontWeight: 'bold' }}>Crea Evento</Button>
-                </DialogActions>
-            </Dialog>
-
-            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-                <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>Evento modificato con successo!</Alert>
-            </Snackbar>
         </Box>
     );
 }
