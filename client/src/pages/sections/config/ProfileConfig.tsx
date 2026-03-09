@@ -1,10 +1,12 @@
 import PersonIcon from '@mui/icons-material/Person';
 import PeopleIcon from '@mui/icons-material/People';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import BuildIcon from '@mui/icons-material/Build';
 
 import PersonalInfo from '../PersonalInfo';
 import Affiliations from '../Affiliations';
 import MyTickets from '../MyTickets';
+import DevOnboarding from '../DevOnboarding';
 
 export const ProfileConfig = [
     {
@@ -24,5 +26,11 @@ export const ProfileConfig = [
         label: 'I Miei Biglietti',
         icon: <ConfirmationNumberIcon />,
         component: MyTickets
+    },
+    {
+        id: 'dev_onboarding',
+        label: 'Dev: Onboarding',
+        icon: <BuildIcon />,
+        component: DevOnboarding
     }
 ];

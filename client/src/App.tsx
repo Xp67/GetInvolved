@@ -12,7 +12,9 @@ import { Box } from '@mui/material';
 
 function AppContent() {
     const location = useLocation();
-    const hideNavbar = location.pathname === '/onboarding';
+    const queryParams = new URLSearchParams(location.search);
+    const isPreview = queryParams.get('preview') === 'true';
+    const hideNavbar = location.pathname === '/onboarding' || isPreview;
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);

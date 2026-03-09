@@ -188,8 +188,21 @@ class Event(models.Model):
 class TicketCategory(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='ticket_categories')
     name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default='')
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_quantity = models.PositiveIntegerField(default=0)
+
+    # Sale dates
+    sale_start_date = models.DateField(null=True, blank=True)
+    sale_start_time = models.TimeField(null=True, blank=True)
+    sale_end_date = models.DateField(null=True, blank=True)
+    sale_end_time = models.TimeField(null=True, blank=True)
+
+    # Aesthetics
+    logo = models.ImageField(upload_to='tickets/logos/', null=True, blank=True)
+    card_bg_type = models.CharField(max_length=20, choices=[('solid', 'Fisso'), ('gradient', 'Gradiente')], default='solid')
+    card_bg_color = models.CharField(max_length=7, default='#FFFFFF')
+    card_bg_color2 = models.CharField(max_length=7, default='#FFFFFF')
 
     def __str__(self):
         return f"{self.name} - {self.event.title}"

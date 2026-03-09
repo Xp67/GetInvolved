@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api',
+    'events',
     'rest_framework',
     'corsheaders',
     'whitenoise.runserver_nostatic',

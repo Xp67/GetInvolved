@@ -14,6 +14,7 @@ function Profile() {
     const [profile, setProfile] = useState({
         username: '', email: '', first_name: '', last_name: '', phone_number: '', bio: '',
         avatar: null as string | null, affiliate_code: '', affiliated_to_username: null as string | null, affiliation_date: null as string | null,
+        all_permissions: [] as string[],
     });
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState({ type: 'success' as 'success' | 'error', text: '' });
@@ -30,6 +31,7 @@ function Profile() {
                 last_name: d.last_name || '', phone_number: d.phone_number || '', bio: d.bio || '',
                 avatar: d.avatar || null, affiliate_code: d.affiliate_code || '',
                 affiliated_to_username: d.affiliated_to_username || null, affiliation_date: d.affiliation_date || null,
+                all_permissions: d.all_permissions || [],
             });
             setLoading(false);
         }).catch(() => setLoading(false));
@@ -39,7 +41,14 @@ function Profile() {
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><CircularProgress /></Box>;
 
-    const ActiveSectionData = ProfileConfig.find(s => s.id === activeSection);
+    const filteredConfig = ProfileConfig.map(s => {
+        if (s.id === 'dev_onboarding') {
+            return { ...s, show: profile.all_permissions.includes('developer.view') };
+        }
+        return s;
+    });
+
+    const ActiveSectionData = filteredConfig.find(s => s.id === activeSection);
     const ActiveComponent = ActiveSectionData?.component;
 
     return (
@@ -51,13 +60,13 @@ function Profile() {
                 </IconButton>
             )}
             <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} sx={{ '& .MuiDrawer-paper': { width: 300 } }}>
-                <AppSidebar title="Il Mio Profilo" items={ProfileConfig} activeItem={activeSection} onItemChange={(id: string) => { setActiveSection(id); setDrawerOpen(false); }} />
+                <AppSidebar title="Il Mio Profilo" items={filteredConfig} activeItem={activeSection} onItemChange={(id: string) => { setActiveSection(id); setDrawerOpen(false); }} />
             </Drawer>
             <Box sx={{
                 width: 300, minWidth: 300, flexShrink: 0, bgcolor: 'background.paper', borderRight: '1px solid', borderColor: 'divider',
                 display: { xs: 'none', md: 'block' }, position: 'sticky', top: 0, height: 'calc(100vh - 64px)', overflowY: 'auto'
             }}>
-                <AppSidebar title="Il Mio Profilo" items={ProfileConfig} activeItem={activeSection} onItemChange={setActiveSection} />
+                <AppSidebar title="Il Mio Profilo" items={filteredConfig} activeItem={activeSection} onItemChange={setActiveSection} />
             </Box>
             <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 4, md: 6 }, pt: { xs: 10, sm: 4, md: 6 }, overflowY: 'auto' }}>
                 <Box sx={{ maxWidth: 1100, width: '100%' }}>

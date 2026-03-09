@@ -13,6 +13,7 @@ function Profile() {
         username: "", email: "", first_name: "", last_name: "", phone_number: "", bio: "",
         avatar: null as string | null, affiliate_code: "", affiliated_to_username: null as string | null, affiliation_date: null as string | null,
         organizer_profile: null as any,
+        all_permissions: [] as string[],
     });
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState({ type: "success" as "success" | "error", text: "" });
@@ -40,6 +41,7 @@ function Profile() {
                 avatar: data.avatar || null, affiliate_code: data.affiliate_code || "",
                 affiliated_to_username: data.affiliated_to_username || null, affiliation_date: data.affiliation_date || null,
                 organizer_profile: data.organizer_profile || null,
+                all_permissions: data.all_permissions || [],
             });
             setLoading(false);
         }).catch((error) => { console.error(error); setLoading(false); });
@@ -60,7 +62,14 @@ function Profile() {
         setDrawerOpen(false);
     };
 
-    const ActiveSectionData = ProfileConfig.find(s => s.id === activeSection);
+    const filteredConfig = ProfileConfig.map(s => {
+        if (s.id === 'dev_onboarding') {
+            return { ...s, show: profile.all_permissions.includes('developer.view') };
+        }
+        return s;
+    });
+
+    const ActiveSectionData = filteredConfig.find(s => s.id === activeSection);
     const ActiveComponent = ActiveSectionData?.component;
 
     return (
@@ -74,14 +83,14 @@ function Profile() {
 
             <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
                 sx={{ display: { xs: 'block', md: 'none' }, '& .MuiDrawer-paper': { width: 300 } }}>
-                <AppSidebar title="Impostazioni" items={ProfileConfig} activeItem={activeSection} onItemChange={handleSidebarChange} />
+                <AppSidebar title="Impostazioni" items={filteredConfig} activeItem={activeSection} onItemChange={handleSidebarChange} />
             </Drawer>
 
             <Box sx={{
                 width: 300, minWidth: 300, flexShrink: 0, bgcolor: 'background.paper', borderRight: '1px solid', borderColor: 'divider',
                 display: { xs: 'none', md: 'block' }, position: 'sticky', top: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', zIndex: 10
             }}>
-                <AppSidebar title="Impostazioni" items={ProfileConfig} activeItem={activeSection} onItemChange={setActiveSection} />
+                <AppSidebar title="Impostazioni" items={filteredConfig} activeItem={activeSection} onItemChange={setActiveSection} />
             </Box>
 
             <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 8 }, pt: { xs: 10, sm: 3, md: 8 }, overflowY: 'auto' }}>

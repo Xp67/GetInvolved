@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    TextField, Paper, List, ListItemButton, ListItemText,
-    CircularProgress, Box, InputAdornment, Typography,
+    TextField,
+    Paper,
+    List,
+    ListItemButton,
+    ListItemText,
+    CircularProgress,
+    Box,
+    InputAdornment,
+    Typography,
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 
@@ -12,18 +19,161 @@ interface AddressAutocompleteProps {
     placeholder?: string;
 }
 
+interface NominatimAddress {
+    house_number?: string;
+    road?: string;
+    street?: string;
+    pedestrian?: string;
+    footway?: string;
+    cycleway?: string;
+    path?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+    suburb?: string;
+    hamlet?: string;
+    neighbourhood?: string;
+    quarter?: string;
+    city_district?: string;
+}
+
 interface NominatimResult {
     place_id: number;
     display_name: string;
     lat: string;
     lon: string;
+    address?: NominatimAddress;
 }
 
-function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder = 'Cerca un indirizzo...' }: AddressAutocompleteProps) {
+interface SuggestionItem {
+    place_id: number;
+    lat: string;
+    lon: string;
+    raw: NominatimResult;
+    cleanLabel: string;
+}
+
+function normalizeSpaces(value: string): string {
+    return value.replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
+}
+
+function extractHouseNumber(input: string): string {
+    const match = input.match(/\b(\d+[A-Za-z]?(?:\/[A-Za-z0-9]+)?(?:-\d+)?)\b/);
+    return match ? match[1].trim() : '';
+}
+
+function removeHouseNumberFromStreet(input: string): string {
+    return normalizeSpaces(
+        input.replace(/\b\d+[A-Za-z]?(?:\/[A-Za-z0-9]+)?(?:-\d+)?\b/g, '').trim()
+    );
+}
+
+function splitQueryParts(query: string): string[] {
+    return query
+        .split(',')
+        .map((part) => normalizeSpaces(part))
+        .filter(Boolean);
+}
+
+function getStreetName(address?: NominatimAddress): string {
+    if (!address) return '';
+    return (
+        address.road ||
+        address.street ||
+        address.pedestrian ||
+        address.footway ||
+        address.cycleway ||
+        address.path ||
+        ''
+    ).trim();
+}
+
+function getApiMainCity(address?: NominatimAddress): string {
+    if (!address) return '';
+    return (
+        address.city ||
+        address.town ||
+        address.municipality ||
+        address.village ||
+        ''
+    ).trim();
+}
+
+function parseUserQuery(query: string) {
+    const parts = splitQueryParts(query);
+
+    const firstPart = parts[0] || '';
+    const secondPart = parts[1] || '';
+    const thirdPart = parts[2] || '';
+
+    const userHouseNumber = extractHouseNumber(firstPart);
+    const userStreet = removeHouseNumberFromStreet(firstPart);
+
+    // Se l'utente scrive: "Via X 14, Dairago"
+    // il comune vero per noi è il secondo pezzo, non quello dell'API
+    const userCity = secondPart || '';
+
+    // Se scrive anche CAP o stato in altre parti, li teniamo separati
+    const extraParts = [thirdPart, ...parts.slice(3)].filter(Boolean);
+
+    return {
+        userStreet,
+        userHouseNumber,
+        userCity,
+        extraParts,
+    };
+}
+
+function buildCleanAddress(result: NominatimResult, originalQuery: string): string {
+    const address = result.address || {};
+    const parsed = parseUserQuery(originalQuery);
+
+    const apiStreet = getStreetName(address);
+    const apiHouseNumber = (address.house_number || '').trim();
+    const apiCity = getApiMainCity(address);
+    const postcode = (address.postcode || '').trim();
+    const country = (address.country || '').trim();
+
+    // Regola forte:
+    // 1. se l'utente ha scritto via e comune, prevalgono loro
+    // 2. l'API serve per completare dove manca qualcosa
+    const finalStreet = parsed.userStreet || apiStreet;
+    const finalHouseNumber = apiHouseNumber || parsed.userHouseNumber;
+    const finalCity = parsed.userCity || apiCity;
+
+    const line1 = normalizeSpaces(
+        [finalStreet, finalHouseNumber].filter(Boolean).join(' ')
+    );
+
+    const line2 = normalizeSpaces(
+        [finalCity, postcode].filter(Boolean).join(', ')
+    );
+
+    const line3 = normalizeSpaces(
+        [...parsed.extraParts, country].filter(Boolean).join(', ')
+    );
+
+    const clean = [line1, line2, line3].filter(Boolean).join(', ').trim();
+
+    return clean || normalizeSpaces(originalQuery);
+}
+
+function AddressAutocomplete({
+    value,
+    onChange,
+    label = 'Indirizzo',
+    placeholder = 'Cerca un indirizzo...',
+}: AddressAutocompleteProps) {
     const [inputValue, setInputValue] = useState(value || '');
-    const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+    const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
+
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,30 +187,52 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
                 setOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const searchAddress = async (query: string) => {
-        if (query.length < 3) {
+        const trimmedQuery = query.trim();
+
+        if (trimmedQuery.length < 3) {
             setSuggestions([]);
             setOpen(false);
             return;
         }
+
         setLoading(true);
+
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+                `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(trimmedQuery)}&limit=5&addressdetails=1`,
                 {
                     headers: {
                         'Accept-Language': 'it',
                     },
                 }
             );
+
+            if (!res.ok) {
+                throw new Error('Errore nella chiamata a Nominatim');
+            }
+
             const data: NominatimResult[] = await res.json();
-            setSuggestions(data);
-            setOpen(data.length > 0);
-        } catch {
+
+            const cleanedSuggestions: SuggestionItem[] = data
+                .map((item) => ({
+                    place_id: item.place_id,
+                    lat: item.lat,
+                    lon: item.lon,
+                    raw: item,
+                    cleanLabel: buildCleanAddress(item, trimmedQuery),
+                }))
+                .filter((item) => item.cleanLabel.trim().length > 0);
+
+            setSuggestions(cleanedSuggestions);
+            setOpen(cleanedSuggestions.length > 0);
+        } catch (error) {
+            console.error('Errore autocomplete indirizzo:', error);
             setSuggestions([]);
             setOpen(false);
         } finally {
@@ -73,13 +245,18 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
         setInputValue(val);
         onChange(val);
 
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => searchAddress(val), 400);
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            searchAddress(val);
+        }, 400);
     };
 
-    const handleSelect = (result: NominatimResult) => {
-        setInputValue(result.display_name);
-        onChange(result.display_name);
+    const handleSelect = (suggestion: SuggestionItem) => {
+        setInputValue(suggestion.cleanLabel);
+        onChange(suggestion.cleanLabel);
         setSuggestions([]);
         setOpen(false);
     };
@@ -92,7 +269,11 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
                 placeholder={placeholder}
                 value={inputValue}
                 onChange={handleInputChange}
-                onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
+                onFocus={() => {
+                    if (suggestions.length > 0) {
+                        setOpen(true);
+                    }
+                }}
                 slotProps={{
                     input: {
                         startAdornment: (
@@ -108,6 +289,7 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
                     },
                 }}
             />
+
             {open && suggestions.length > 0 && (
                 <Paper
                     elevation={8}
@@ -126,10 +308,10 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
                     }}
                 >
                     <List dense disablePadding>
-                        {suggestions.map((result) => (
+                        {suggestions.map((suggestion) => (
                             <ListItemButton
-                                key={result.place_id}
-                                onClick={() => handleSelect(result)}
+                                key={suggestion.place_id}
+                                onClick={() => handleSelect(suggestion)}
                                 sx={{
                                     py: 1.5,
                                     px: 2,
@@ -138,11 +320,17 @@ function AddressAutocomplete({ value, onChange, label = 'Indirizzo', placeholder
                                     },
                                 }}
                             >
-                                <LocationOnIcon sx={{ mr: 1.5, color: 'text.secondary', fontSize: 20 }} />
+                                <LocationOnIcon
+                                    sx={{
+                                        mr: 1.5,
+                                        color: 'text.secondary',
+                                        fontSize: 20,
+                                    }}
+                                />
                                 <ListItemText
                                     primary={
                                         <Typography variant="body2" noWrap>
-                                            {result.display_name}
+                                            {suggestion.cleanLabel}
                                         </Typography>
                                     }
                                 />

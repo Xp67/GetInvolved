@@ -1,17 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    Paper, List, ListItemButton, ListItemText,
-    CircularProgress, Box, InputAdornment, Typography,
+    TextField,
+    Paper,
+    List,
+    ListItemButton,
+    ListItemText,
+    CircularProgress,
+    Box,
+    InputAdornment,
+    Typography,
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import { AppTextField } from './form/index';
-
-export interface LocationData {
-    address: string;
-    latitude: number;
-    longitude: number;
-    country_code: string;
-}
 
 interface AddressAutocompleteProps {
     value: string;
@@ -22,22 +21,106 @@ interface AddressAutocompleteProps {
     disabled?: boolean;
 }
 
+interface NominatimAddress {
+    house_number?: string;
+    road?: string;
+    street?: string;
+    pedestrian?: string;
+    footway?: string;
+    cycleway?: string;
+    path?: string;
+    suburb?: string;
+    city_district?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+    country_code?: string;
+}
+
 interface NominatimResult {
     place_id: number;
     display_name: string;
     lat: string;
     lon: string;
-    address?: {
-        country_code?: string;
-        [key: string]: any;
-    };
+    address?: NominatimAddress;
 }
 
-function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indirizzo', placeholder = 'Cerca un indirizzo...', disabled, sx }: AddressAutocompleteProps & { sx?: any }) {
+export interface LocationData {
+    place_id: number;
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+    country_code: string;
+    raw: NominatimResult;
+}
+
+function normalize(val: string | undefined): string {
+    return (val || '').trim();
+}
+
+/**
+ * Extracts a house number from a string (e.g., "Via Roma 10" -> "10")
+ */
+function extractHouseNumber(query: string): string {
+    const match = query.match(/\b(\d+[A-Za-z]?)\b/);
+    return match ? match[1] : '';
+}
+
+function buildCleanAddress(result: NominatimResult, originalQuery: string): string {
+    const addr = result.address || {};
+
+    // 1. Street
+    const street = normalize(addr.road || addr.street || addr.pedestrian || addr.footway || addr.path);
+
+    // 2. House Number (API priority, Fallback to Query)
+    let houseNumber = normalize(addr.house_number);
+    if (!houseNumber) {
+        houseNumber = extractHouseNumber(originalQuery);
+    }
+
+    // 3. City
+    const city = normalize(addr.city || addr.town || addr.village || addr.municipality);
+
+    // 4. Province (State or County)
+    const province = normalize(addr.state || addr.county);
+
+    // 5. ZIP
+    const zip = normalize(addr.postcode);
+
+    // 6. Country
+    const country = normalize(addr.country);
+
+    // Standard Format: (Via, Viale, Strada ecc ecc) , (numero civico) , (citta) , (provincia), (codice postale), (nazione)
+    const parts = [
+        street,
+        houseNumber,
+        city,
+        province,
+        zip,
+        country
+    ].filter(Boolean);
+
+    return parts.join(', ');
+}
+
+function AddressAutocomplete({
+    value,
+    onChange,
+    onLocationSelect,
+    label = 'Indirizzo',
+    placeholder = 'Cerca un indirizzo...',
+    disabled = false,
+}: AddressAutocompleteProps) {
     const [inputValue, setInputValue] = useState(value || '');
-    const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+    const [suggestions, setSuggestions] = useState<LocationData[]>([]);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
+
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,30 +134,52 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
                 setOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const searchAddress = async (query: string) => {
-        if (query.length < 3) {
+        const trimmedQuery = query.trim();
+
+        if (trimmedQuery.length < 3) {
             setSuggestions([]);
             setOpen(false);
             return;
         }
+
         setLoading(true);
+
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+                `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(trimmedQuery)}&limit=5&addressdetails=1`,
                 {
                     headers: {
                         'Accept-Language': 'it',
                     },
                 }
             );
+
+            if (!res.ok) {
+                throw new Error('Errore nella chiamata a Nominatim');
+            }
+
             const data: NominatimResult[] = await res.json();
-            setSuggestions(data);
-            setOpen(data.length > 0);
-        } catch {
+
+            const cleanedSuggestions: LocationData[] = data
+                .map((item) => ({
+                    place_id: item.place_id,
+                    address: buildCleanAddress(item, trimmedQuery),
+                    latitude: item.lat ? Number(item.lat) : null,
+                    longitude: item.lon ? Number(item.lon) : null,
+                    country_code: item.address?.country_code || '',
+                    raw: item,
+                }));
+
+            setSuggestions(cleanedSuggestions);
+            setOpen(cleanedSuggestions.length > 0);
+        } catch (error) {
+            console.error('Errore autocomplete indirizzo:', error);
             setSuggestions([]);
             setOpen(false);
         } finally {
@@ -87,38 +192,37 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
         setInputValue(val);
         onChange(val);
 
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => searchAddress(val), 400);
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            searchAddress(val);
+        }, 400);
     };
 
-    const handleSelect = (result: NominatimResult) => {
-        setInputValue(result.display_name);
-        onChange(result.display_name);
+    const handleSelect = (suggestion: LocationData) => {
+        setInputValue(suggestion.address);
+        onChange(suggestion.address);
+        onLocationSelect?.(suggestion);
         setSuggestions([]);
         setOpen(false);
-
-        // Send structured location data
-        if (onLocationSelect) {
-            onLocationSelect({
-                address: result.display_name,
-                latitude: parseFloat(result.lat),
-                longitude: parseFloat(result.lon),
-                country_code: (result.address?.country_code || '').toUpperCase(),
-            });
-        }
     };
 
     return (
-        <Box ref={containerRef} sx={{ position: 'relative', width: '100%', ...sx }}>
-            <AppTextField
+        <Box ref={containerRef} sx={{ position: 'relative', width: '100%' }}>
+            <TextField
                 fullWidth
-                id="address-autocomplete-field"
                 label={label}
                 placeholder={placeholder}
                 value={inputValue}
                 onChange={handleInputChange}
-                onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
                 disabled={disabled}
+                onFocus={() => {
+                    if (suggestions.length > 0) {
+                        setOpen(true);
+                    }
+                }}
                 slotProps={{
                     input: {
                         startAdornment: (
@@ -134,6 +238,7 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
                     },
                 }}
             />
+
             {open && suggestions.length > 0 && (
                 <Paper
                     elevation={8}
@@ -152,10 +257,10 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
                     }}
                 >
                     <List dense disablePadding>
-                        {suggestions.map((result) => (
+                        {suggestions.map((suggestion) => (
                             <ListItemButton
-                                key={result.place_id}
-                                onClick={() => handleSelect(result)}
+                                key={suggestion.place_id}
+                                onClick={() => handleSelect(suggestion)}
                                 sx={{
                                     py: 1.5,
                                     px: 2,
@@ -164,11 +269,17 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
                                     },
                                 }}
                             >
-                                <LocationOnIcon sx={{ mr: 1.5, color: 'text.secondary', fontSize: 20 }} />
+                                <LocationOnIcon
+                                    sx={{
+                                        mr: 1.5,
+                                        color: 'text.secondary',
+                                        fontSize: 20,
+                                    }}
+                                />
                                 <ListItemText
                                     primary={
                                         <Typography variant="body2" noWrap>
-                                            {result.display_name}
+                                            {suggestion.address}
                                         </Typography>
                                     }
                                 />
@@ -182,4 +293,3 @@ function AddressAutocomplete({ value, onChange, onLocationSelect, label = 'Indir
 }
 
 export default AddressAutocomplete;
-

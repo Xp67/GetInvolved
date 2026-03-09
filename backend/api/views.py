@@ -13,6 +13,8 @@ import time
 import jwt
 import os
 import traceback
+import requests
+from io import BytesIO
 from google.cloud import secretmanager
 from django.conf import settings
 from rest_framework import generics, filters, status
@@ -28,7 +30,8 @@ from .serializer import (
 User = get_user_model()
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Event, Role, AppPermission, PermissionCategory, Ticket, TicketCategory
-from .permissions import HasAppPermission, EventPermission
+from .permissions import HasAppPermission, EventPermission, IsEventOwnerOrHasPermission
+from .permission_registry import Perms
 
 
 # Create your views here.
@@ -42,9 +45,9 @@ class EventListCreate(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_super_admin or user.has_app_permission('events.view_all'):
+        if user.is_super_admin or user.has_app_permission(Perms.EVENTS_VIEW_ALL):
             return Event.objects.all()
-        if user.has_app_permission('events.view_own'):
+        if user.has_app_permission(Perms.EVENTS_VIEW_OWN):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
 
@@ -63,9 +66,9 @@ class EventDelete(generics.DestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_super_admin or user.has_app_permission('events.delete_all'):
+        if user.is_super_admin or user.has_app_permission(Perms.EVENTS_DELETE_ALL):
             return Event.objects.all()
-        if user.has_app_permission('events.delete_own'):
+        if user.has_app_permission(Perms.EVENTS_DELETE_OWN):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
 
@@ -81,9 +84,9 @@ class EventUpdate(generics.UpdateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_super_admin or user.has_app_permission('events.edit_all'):
+        if user.is_super_admin or user.has_app_permission(Perms.EVENTS_EDIT_ALL):
             return Event.objects.all()
-        if user.has_app_permission('events.edit_own'):
+        if user.has_app_permission(Perms.EVENTS_EDIT_OWN):
             return Event.objects.filter(organizer=user)
         return Event.objects.none()
 
@@ -104,12 +107,10 @@ class PublicEventDetailView(generics.RetrieveAPIView):
 
 class EventForceStatusView(APIView):
     """Admin-only endpoint to force-change event status without validation."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppPermission]
+    required_permission = Perms.EVENTS_OVERRIDE_STATUS
 
     def patch(self, request, pk):
-        user = request.user
-        if not (user.is_super_admin or user.has_app_permission('events.override_status')):
-            return Response({"error": "Permesso negato."}, status=status.HTTP_403_FORBIDDEN)
 
         event = get_object_or_404(Event, pk=pk)
         new_status = request.data.get('status')
@@ -163,10 +164,10 @@ class RoleListCreate(generics.ListCreateAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [HasAppPermission]
-    required_permission = 'roles.view'
+    required_permission = Perms.ROLES_VIEW
 
     def perform_create(self, serializer):
-        if self.request.user.has_app_permission('roles.create'):
+        if self.request.user.has_app_permission(Perms.ROLES_CREATE):
             serializer.save()
         else:
             from rest_framework.exceptions import PermissionDenied
@@ -176,17 +177,17 @@ class RoleDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [HasAppPermission]
-    required_permission = 'roles.view'
+    required_permission = Perms.ROLES_VIEW
 
     def perform_update(self, serializer):
-        if self.request.user.has_app_permission('roles.edit'):
+        if self.request.user.has_app_permission(Perms.ROLES_EDIT):
             serializer.save()
         else:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Non hai il permesso di modificare ruoli.")
 
     def perform_destroy(self, instance):
-        if not self.request.user.has_app_permission('roles.delete'):
+        if not self.request.user.has_app_permission(Perms.ROLES_DELETE):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Non hai il permesso di eliminare ruoli.")
         if not instance.is_deletable:
@@ -203,7 +204,7 @@ class UserList(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [HasAppPermission]
-    required_permission = 'users.view'
+    required_permission = Perms.USERS_VIEW
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email']
 
@@ -211,7 +212,7 @@ class UserUpdate(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [HasAppPermission]
-    required_permission = 'users.assign_roles'
+    required_permission = Perms.USERS_ASSIGN_ROLES
 
 from rest_framework.pagination import PageNumberPagination
 
@@ -236,7 +237,8 @@ class TicketCategoryCreateView(generics.CreateAPIView):
         event_id = self.request.data.get('event')
         try:
             event = Event.objects.get(id=event_id)
-            if event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
+            user = self.request.user
+            if event.organizer != user and not user.is_super_admin and not user.has_app_permission(Perms.TICKETS_MANAGE):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può aggiungere categorie di biglietti.")
             serializer.save(event=event)
@@ -247,25 +249,14 @@ class TicketCategoryCreateView(generics.CreateAPIView):
 class TicketCategoryUpdateView(generics.UpdateAPIView):
     queryset = TicketCategory.objects.all()
     serializer_class = TicketCategorySerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_update(self, serializer):
-        category = self.get_object()
-        if category.event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può modificare le categorie.")
-        serializer.save()
+    permission_classes = [IsEventOwnerOrHasPermission]
 
 class TicketCategoryDeleteView(generics.DestroyAPIView):
     queryset = TicketCategory.objects.all()
     serializer_class = TicketCategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsEventOwnerOrHasPermission]
 
     def perform_destroy(self, instance):
-        if instance.event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Solo l'organizzatore o chi ha i permessi può eliminare le categorie.")
-        # Optional: check if tickets have already been sold
         if instance.tickets.count() > 0:
             from rest_framework.exceptions import ValidationError
             raise ValidationError("Impossibile eliminare una categoria che ha già venduto biglietti.")
@@ -302,7 +293,8 @@ class EventTicketsListView(generics.ListAPIView):
         event_id = self.kwargs.get('event_id')
         try:
             event = Event.objects.get(id=event_id)
-            if event.organizer != self.request.user and not self.request.user.is_super_admin and not self.request.user.has_app_permission('tickets.manage'):
+            user = self.request.user
+            if event.organizer != user and not user.is_super_admin and not user.has_app_permission(Perms.TICKETS_MANAGE):
                 return Ticket.objects.none()
             return Ticket.objects.filter(category__event=event).order_by('-purchase_date')
         except Event.DoesNotExist:
@@ -325,7 +317,7 @@ class TicketValidationView(APIView):
                 return Response({"error": "Identificativo biglietto mancante"}, status=status.HTTP_400_BAD_REQUEST)
 
             event = ticket.category.event
-            if event.organizer != request.user and not request.user.is_super_admin and not request.user.has_app_permission('tickets.manage'):
+            if event.organizer != request.user and not request.user.is_super_admin and not request.user.has_app_permission(Perms.TICKETS_MANAGE):
                 return Response({"error": "Permesso negato"}, status=status.HTTP_403_FORBIDDEN)
 
             if ticket.is_checked_in:
@@ -383,66 +375,200 @@ class TicketDownloadPDFView(APIView):
             traceback.print_exc()
             return Response({"error": "Errore generazione PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Draw Ticket Graphic Border
-        p.setStrokeColor(colors.HexColor('#6200EA'))
-        p.setLineWidth(3)
-        p.rect(2*cm, height - 12*cm, width - 4*cm, 10*cm)
-
-        # Draw Header Profile
-        p.setFillColor(colors.HexColor('#6200EA'))
-        p.rect(2*cm, height - 4*cm, width - 4*cm, 2*cm, fill=1)
+        # Define dynamic colors from category
+        bg_color_hex = ticket.category.card_bg_color or '#6200EA'
         
-        p.setFillColor(colors.white)
-        p.setFont("Helvetica-Bold", 20)
-        p.drawString(2.5*cm, height - 3.2*cm, "E-TICKET")
-        p.setFont("Helvetica", 12)
-        p.drawRightString(width - 2.5*cm, height - 3.2*cm, "GetInvolved")
+        try:
+            # Parse hex dynamically
+            hex_c = bg_color_hex.lstrip('#')
+            if len(hex_c) == 3: hex_c = hex_c[0]*2 + hex_c[1]*2 + hex_c[2]*2
+            r, g, b = tuple(int(hex_c[i:i+2], 16)/255.0 for i in (0, 2, 4))
+            primary_color = colors.Color(r,g,b)
+            # Calculate luminance for contrast text
+            if (r*0.299 + g*0.587 + b*0.114) > 0.73:
+                contrast_color = colors.black
+            else:
+                contrast_color = colors.white
+        except Exception:
+            primary_color = colors.HexColor('#6200EA')
+            contrast_color = colors.white
 
-        # Ticket Information
+        # Dimensions for a vertical full-page modern digital ticket
+        t_width = 19 * cm
+        t_height = 26 * cm
+        margin_x = 1 * cm
+        margin_y = height - 27.5 * cm
+
+        # Draw main ticket boundary
+        p.setStrokeColor(primary_color)
+        p.setLineWidth(2)
+        p.roundRect(margin_x, margin_y, t_width, t_height, 15, fill=0, stroke=1)
+
+        # Clip everything inside the boundary for safe drawing of background colors/images
+        p.saveState()
+        path = p.beginPath()
+        path.roundRect(margin_x, margin_y, t_width, t_height, 15)
+        p.clipPath(path, stroke=0, fill=0)
+
+        # SECTION 1: HEADER (Hero Image & Badge) [Top 8 cm]
+        # Background fallback
+        p.setFillColor(primary_color)
+        p.rect(margin_x, margin_y + t_height - 8*cm, t_width, 8*cm, fill=1, stroke=0)
+
+        # Hero Image (or Poster as fallback)
+        hero_img = None
+        if event.hero_image and os.path.exists(event.hero_image.path):
+            hero_img = event.hero_image.path
+        elif event.poster_image and os.path.exists(event.poster_image.path):
+            hero_img = event.poster_image.path
+
+        if hero_img:
+            try:
+                p.drawImage(hero_img, margin_x, margin_y + t_height - 8*cm, width=t_width, height=8*cm, preserveAspectRatio=False)
+                # Overlay semi-transparent dark gradient/tint to make text pop
+                p.setFillColor(colors.Color(0, 0, 0, alpha=0.3))
+                p.rect(margin_x, margin_y + t_height - 8*cm, t_width, 8*cm, fill=1, stroke=0)
+            except Exception:
+                pass
+
+        # Top Bar for Logo and E-TICKET
+        p.setFillColor(colors.Color(primary_color.red, primary_color.green, primary_color.blue, alpha=0.9))
+        p.rect(margin_x, margin_y + t_height - 2*cm, t_width, 2*cm, fill=1, stroke=0)
+
+        # E-TICKET text
+        p.setFillColor(contrast_color)
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(margin_x + 1*cm, margin_y + t_height - 1.3*cm, "E-TICKET")
+        p.setFont("Helvetica", 12)
+        p.drawRightString(margin_x + t_width - 1*cm, margin_y + t_height - 1.3*cm, "GetInvolved")
+
+        # SECTION 2: EVENT DETAILS (Middle 8 cm: Y_end = t_height - 16cm)
+        p.setFillColor(colors.whitesmoke)
+        p.rect(margin_x, margin_y + t_height - 16*cm, t_width, 8*cm, fill=1, stroke=0)
+
+        # Poster Image
+        poster_img = None
+        if event.poster_image and os.path.exists(event.poster_image.path):
+            poster_img = event.poster_image.path
+        
+        text_start_x = margin_x + 1*cm
+
+        if poster_img:
+            try:
+                p.drawImage(poster_img, margin_x + 1*cm, margin_y + t_height - 15*cm, width=5*cm, height=6.5*cm, preserveAspectRatio=True, anchor='c')
+                text_start_x += 5.5*cm
+            except Exception:
+                pass
+
+        # Event Texts
+        p.setFillColor(colors.darkgrey)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(text_start_x, margin_y + t_height - 10.3*cm, "EVENTO")
+        
         p.setFillColor(colors.black)
         
-        # Event Details
+        title = event.title
+        # Truncate title manually to avoid import complexities
+        if len(title) > 35: title = title[:32] + "..."
         p.setFont("Helvetica-Bold", 18)
-        p.drawString(2.5*cm, height - 5*cm, event.title)
+        curr_y = margin_y + t_height - 11.2*cm
+        p.drawString(text_start_x, curr_y, title)
+
+        curr_y -= 0.8*cm
+        p.setFillColor(colors.darkgrey)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(text_start_x, curr_y, "DATA E ORA")
         
+        p.setFillColor(colors.black)
         p.setFont("Helvetica", 12)
-        date_str = event.date.strftime('%d/%m/%Y') if event.date else 'Data N/D'
+        date_str = event.date.strftime('%d/%m/%Y') if event.date else 'N/D'
         time_str = event.start_time.strftime('%H:%M') if event.start_time else ''
-        p.drawString(2.5*cm, height - 5.8*cm, f"Data: {date_str} {time_str}")
-        p.drawString(2.5*cm, height - 6.5*cm, f"Luogo: {event.location}")
+        curr_y -= 0.6*cm
+        p.drawString(text_start_x, curr_y, f"{date_str} {time_str}")
+
+        curr_y -= 0.8*cm
+        p.setFillColor(colors.darkgrey)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(text_start_x, curr_y, "LUOGO")
         
-        # Divider
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica", 12)
+        loc = event.location
+        if len(loc) > 40: loc = loc[:37] + "..."
+        curr_y -= 0.6*cm
+        p.drawString(text_start_x, curr_y, loc)
+
+        # DividerLine
         p.setStrokeColor(colors.lightgrey)
         p.setLineWidth(1)
-        p.line(2.5*cm, height - 7*cm, 12*cm, height - 7*cm)
-        
-        # User & Ticket Category
+        p.line(margin_x + 1*cm, margin_y + t_height - 16*cm, margin_x + t_width - 1*cm, margin_y + t_height - 16*cm)
+
+        # SECTION 3: TICKET DETAILS (Next 3 cm: Y_end = t_height - 19cm)
+        p.setFillColor(colors.white)
+        p.rect(margin_x, margin_y + t_height - 19*cm, t_width, 3*cm, fill=1, stroke=0)
+
+        p.setFillColor(colors.darkgrey)
+        p.setFont("Helvetica-Bold", 10)
+        # 3 columns layout
+        p.drawString(margin_x + 1*cm, margin_y + t_height - 17.2*cm, "ACQUIRENTE")
+        p.drawString(margin_x + 7*cm, margin_y + t_height - 17.2*cm, "TIPOLOGIA")
+        p.drawString(margin_x + 13*cm, margin_y + t_height - 17.2*cm, "PREZZO")
+
+        p.setFillColor(colors.black)
         p.setFont("Helvetica-Bold", 12)
-        p.drawString(2.5*cm, height - 7.8*cm, "Acquirente:")
-        p.setFont("Helvetica", 12)
         owner_name = f"{ticket.owner.first_name} {ticket.owner.last_name}".strip() or ticket.owner.username
-        p.drawString(2.5*cm, height - 8.4*cm, owner_name)
+        if len(owner_name) > 22: owner_name = owner_name[:19] + "..."
+        p.drawString(margin_x + 1*cm, margin_y + t_height - 18.2*cm, owner_name)
         
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(2.5*cm, height - 9.4*cm, "Tipologia:")
-        p.setFont("Helvetica", 12)
-        p.drawString(2.5*cm, height - 10*cm, ticket.category.name)
+        cat_name = ticket.category.name
+        if len(cat_name) > 18: cat_name = cat_name[:15] + "..."
+        p.drawString(margin_x + 7*cm, margin_y + t_height - 18.2*cm, cat_name)
+        
+        price_str = f"€ {ticket.category.price:.2f}" if ticket.category.price > 0 else "GRATIS"
+        p.drawString(margin_x + 13*cm, margin_y + t_height - 18.2*cm, price_str)
 
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(2.5*cm, height - 11*cm, "Prezzo:")
-        p.setFont("Helvetica", 12)
-        price_str = f"€{ticket.category.price}" if ticket.category.price > 0 else "GRATUITA"
-        p.drawString(2.5*cm, height - 11.6*cm, price_str)
-        
-        # Draw QR Code Image
-        p.drawImage(ImageReader(qr_stream), width - 7*cm, height - 10.5*cm, width=4.5*cm, height=4.5*cm)
-        
-        p.setFont("Helvetica", 8)
-        p.drawCentredString(width - 4.75*cm, height - 11*cm, str(ticket.ticket_code))
+        # Divider Line Dash
+        p.setStrokeColor(colors.lightgrey)
+        p.setLineWidth(2)
+        p.setDash(6, 6)
+        p.line(margin_x, margin_y + t_height - 19*cm, margin_x + t_width, margin_y + t_height - 19*cm)
+        p.setDash()
 
-        # Footer notes
+        # SECTION 4: QR CODE & LOGOS (Bottom 7 cm: Y = 0 to t_height - 19cm)
+        p.setFillColor(colors.whitesmoke)
+        p.rect(margin_x, margin_y, t_width, t_height - 19*cm, fill=1, stroke=0)
+
+        # QR Code centered
+        qr_size = 4.5 * cm
+        p.drawImage(ImageReader(qr_stream), margin_x + t_width/2 - qr_size/2, margin_y + 2.5*cm, width=qr_size, height=qr_size)
+        
+        p.setFont("Helvetica", 9)
+        p.setFillColor(colors.darkgrey)
+        p.drawCentredString(margin_x + t_width/2, margin_y + 2*cm, "Scansiona all'ingresso")
+        
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawCentredString(margin_x + t_width/2, margin_y + 1.2*cm, str(ticket.ticket_code))
+
+        # Logos at the bottom left/right
+        logo_to_draw = None
+        if ticket.category.logo:
+            logo_to_draw = ticket.category.logo.path
+        elif event.organizer_logo:
+            logo_to_draw = event.organizer_logo.path
+
+        if logo_to_draw and os.path.exists(logo_to_draw):
+            try:
+                p.drawImage(logo_to_draw, margin_x + 1*cm, margin_y + 0.5*cm, width=2*cm, height=2*cm, preserveAspectRatio=True, anchor='sw', mask='auto')
+            except Exception:
+                pass
+                
+        p.restoreState()
+
+        # Footer notes below the ticket
         p.setFont("Helvetica-Oblique", 10)
-        p.drawString(2*cm, height - 13*cm, "Mostra questo biglietto all'ingresso.")
+        p.setFillColor(colors.darkgrey)
+        p.drawCentredString(width/2, margin_y - 1*cm, "Mostra questo biglietto all'ingresso. Conservalo con cura.")
 
         p.showPage()
         p.save()
@@ -503,15 +629,35 @@ class TicketDownloadGoogleWalletView(APIView):
         except Exception as e:
             return Response({"error": f"Errore lettura GOOGLE_WALLET_ISSUER_ID da Secret Manager: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        class_id = f"{issuer_id}.{ticket.category.event.google_wallet_class_id}"
+        # Define event for easier access
+        event = ticket.category.event
+        
+        class_id = f"{issuer_id}.{event.google_wallet_class_id}"
         clean_uuid = str(ticket.ticket_code).replace('-', '')
         object_id = f"{issuer_id}.t_{clean_uuid}"
+
+        # Build absolute URLs for images (Wallet API needs public URLs)
+        # We try to use request.build_absolute_uri, but Google Wallet will fail to load images from localhost.
+        # So we supply them only if we're theoretically in production or at least provide the field.
+        logo_url = None
+        if ticket.category.logo:
+            logo_url = request.build_absolute_uri(ticket.category.logo.url)
+        elif event.organizer_logo:
+            logo_url = request.build_absolute_uri(event.organizer_logo.url)
+            
+        hero_url = None
+        if event.hero_image:
+            hero_url = request.build_absolute_uri(event.hero_image.url)
+
+        # Dynamic color
+        bg_color = ticket.category.card_bg_color or '#6200EA'
 
         # Define the Event Ticket Class
         new_class = {
             "id": class_id,
             "issuerName": "GetInvolved",
             "reviewStatus": "UNDER_REVIEW",
+            "hexBackgroundColor": bg_color,
             "eventName": {
                 "defaultValue": {
                     "language": "it",
@@ -519,12 +665,30 @@ class TicketDownloadGoogleWalletView(APIView):
                 }
             }
         }
+        
+        # Only inject images if they look like real public URLs, since Google Wallet rejects localhost images
+        if logo_url and 'localhost' not in logo_url and '127.0.0.1' not in logo_url:
+            new_class["logo"] = {
+                "sourceUri": { "uri": logo_url },
+                "contentDescription": {
+                    "defaultValue": { "language": "it", "value": "Logo Evento" }
+                }
+            }
+            
+        if hero_url and 'localhost' not in hero_url and '127.0.0.1' not in hero_url:
+            new_class["heroImage"] = {
+                "sourceUri": { "uri": hero_url },
+                "contentDescription": {
+                    "defaultValue": { "language": "it", "value": "Immagine Evento" }
+                }
+            }
 
         # Define the Event Ticket Object
         new_object = {
             "id": object_id,
             "classId": class_id,
             "state": "ACTIVE",
+            "hexBackgroundColor": bg_color,
             "barcode": {
                 "type": "QR_CODE",
                 "value": str(ticket.ticket_code),
