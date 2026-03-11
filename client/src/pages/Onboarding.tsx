@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import {
-    Box, Container, Paper, Typography, TextField, Button, Stack,
-    Stepper, Step, StepLabel, Chip, Fade, CircularProgress,
+    Box, Container, Paper, Typography, Button, Stack,
+    Stepper, Step, StepLabel, Chip, Fade, CircularProgress, Grid,
 } from '@mui/material';
+import { AppTextField } from '../components/form';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -15,27 +16,55 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 const steps = ['Nickname', 'Dove vivi?', 'Musica', 'Fine'];
 
 const musicGenres: string[] = [];
-// Placeholder — you can add genres here in the future, e.g.:
-// const musicGenres = ['Pop', 'Rock', 'Hip Hop', 'Jazz', 'Elettronica', 'Classica', 'R&B', 'Reggaeton', 'Indie', 'Metal'];
 
-function Onboarding() {
+// Coppie nome+cognome casuali — modifica qui la lista a piacere
+const SAMPLE_PEOPLE = [
+    { name: 'Lara', surname: 'Ghirardi' },
+    { name: 'Mirea', surname: 'Elia' },
+    { name: 'Matteo', surname: 'Cafà' },
+    { name: 'Giovanni', surname: 'Parisi' },
+    { name: 'Marco', surname: 'Elefanti' },
+    { name: 'Giulia', surname: 'Tessaro' },
+    { name: 'Samuele', surname: 'Risalvato' },
+    { name: 'Sofia', surname: 'Castelli' },
+    { name: 'Brenda', surname: 'Palazzo' },
+    { name: 'Moreno', surname: 'Gallazzi' },
+    { name: 'Mattia', surname: 'Maciariello' },
+    { name: 'Alice', surname: 'Bubbo' },
+    { name: 'Anwar', surname: 'Giani' },
+    { name: 'Simone', surname: 'Marocco' },
+    { name: 'Matteo', surname: 'Caprì' },
+    { name: 'Davide', surname: 'Cislaghi' },
+    { name: 'Chiara', surname: 'D Alio' }
+];
+const pickPerson = () => SAMPLE_PEOPLE[Math.floor(Math.random() * SAMPLE_PEOPLE.length)];
+
+interface OnboardingProps {
+    embedded?: boolean;
+    onComplete?: () => void;
+}
+
+function Onboarding({ embedded = false, onComplete }: OnboardingProps = {}) {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const redirectTo = searchParams.get('redirect') || '/';
     const [activeStep, setActiveStep] = useState(0);
     const [nickname, setNickname] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [samplePerson] = useState(pickPerson);
     const [location, setLocation] = useState('');
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Redirect countdown on last step
+    // Redirect countdown on last step — skip when embedded
     useEffect(() => {
-        if (activeStep === 3) {
+        if (activeStep === 3 && !embedded) {
             const timer = setTimeout(() => navigate(redirectTo), 3000);
             return () => clearTimeout(timer);
         }
-    }, [activeStep, navigate, redirectTo]);
+    }, [activeStep, navigate, redirectTo, embedded]);
 
     const toggleGenre = (genre: string) => {
         setSelectedGenres((prev) =>
@@ -49,10 +78,13 @@ function Onboarding() {
         try {
             await api.patch('/api/user/onboarding/', {
                 nickname: nickname || undefined,
+                first_name: firstName || undefined,
+                last_name: lastName || undefined,
                 location: location || undefined,
                 music_preferences: selectedGenres.length > 0 ? selectedGenres : [],
             });
             setActiveStep(3);
+            if (embedded && onComplete) onComplete();
         } catch {
             setError('Errore durante il salvataggio. Riprova.');
         } finally {
@@ -84,13 +116,15 @@ function Onboarding() {
     return (
         <Box
             sx={{
-                minHeight: '100vh',
+                minHeight: embedded ? 'auto' : '100vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: (t) =>
-                    `linear-gradient(135deg, ${t.palette.background.default} 0%, ${t.palette.primary.dark}22 50%, ${t.palette.background.default} 100%)`,
-                py: 4,
+                background: embedded
+                    ? 'transparent'
+                    : (t) =>
+                        `linear-gradient(135deg, ${t.palette.background.default} 0%, ${t.palette.primary.dark}22 50%, ${t.palette.background.default} 100%)`,
+                py: embedded ? 0 : 4,
             }}
         >
             <Container maxWidth="sm">
@@ -180,20 +214,43 @@ function Onboarding() {
                                             <PersonOutlineIcon sx={{ fontSize: 40, color: 'white' }} />
                                         </Box>
                                         <Typography variant="h6" fontWeight="bold" textAlign="center">
-                                            Come vuoi essere chiamato?
+                                            Raccontaci di te
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary" textAlign="center">
-                                            Scegli un nickname che ti rappresenti
+                                            Scegli un nickname e inserisci il tuo nome (opzionale)
                                         </Typography>
-                                        <TextField
-                                            fullWidth
-                                            label="Nickname"
-                                            placeholder="Il tuo nickname..."
-                                            value={nickname}
-                                            onChange={(e) => setNickname(e.target.value)}
-                                            autoFocus
-                                            sx={{ maxWidth: 400 }}
-                                        />
+                                        <Box sx={{ width: '100%', maxWidth: 400 }}>
+                                            <Stack spacing={2}>
+                                                <AppTextField
+                                                    fullWidth
+                                                    label="Nickname"
+                                                    placeholder="Il tuo nickname..."
+                                                    value={nickname}
+                                                    onChange={(e) => setNickname(e.target.value)}
+                                                    autoFocus
+                                                />
+                                                <Grid container spacing={2}>
+                                                    <Grid size={6}>
+                                                        <AppTextField
+                                                            fullWidth
+                                                            label="Nome"
+                                                            placeholder={samplePerson.name}
+                                                            value={firstName}
+                                                            onChange={(e) => setFirstName(e.target.value)}
+                                                        />
+                                                    </Grid>
+                                                    <Grid size={6}>
+                                                        <AppTextField
+                                                            fullWidth
+                                                            label="Cognome"
+                                                            placeholder={samplePerson.surname}
+                                                            value={lastName}
+                                                            onChange={(e) => setLastName(e.target.value)}
+                                                        />
+                                                    </Grid>
+                                                </Grid>
+                                            </Stack>
+                                        </Box>
                                     </Stack>
                                 </Fade>
                             )}
@@ -335,15 +392,34 @@ function Onboarding() {
                                             <CelebrationIcon sx={{ fontSize: 50, color: 'white' }} />
                                         </Box>
                                         <Typography variant="h5" fontWeight="bold" textAlign="center">
-                                            Grazie, {nickname || 'benvenuto'}! 🎉
+                                            Benvenuto{firstName ? `, ${firstName}` : nickname ? `, ${nickname}` : ''}! 🎉
                                         </Typography>
                                         <Typography variant="body1" color="text.secondary" textAlign="center">
                                             Il tuo profilo è stato configurato con successo.
                                         </Typography>
-                                        <Typography variant="body2" color="text.disabled" textAlign="center">
-                                            Verrai reindirizzato alla home tra pochi secondi...
-                                        </Typography>
-                                        <CircularProgress size={24} sx={{ mt: 1 }} />
+                                        {embedded ? (
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    setActiveStep(0);
+                                                    setNickname('');
+                                                    setFirstName('');
+                                                    setLastName('');
+                                                    setLocation('');
+                                                    setSelectedGenres([]);
+                                                }}
+                                                sx={{ mt: 1, textTransform: 'none', borderRadius: 2 }}
+                                            >
+                                                Ricomincia
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Typography variant="body2" color="text.disabled" textAlign="center">
+                                                    Verrai reindirizzato alla home tra pochi secondi...
+                                                </Typography>
+                                                <CircularProgress size={24} sx={{ mt: 1 }} />
+                                            </>
+                                        )}
                                     </Stack>
                                 </Fade>
                             )}

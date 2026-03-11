@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import {
-    Box, Container, Paper, Typography, TextField, Button, Stack,
+    Box, Container, Paper, Typography, Button, Stack,
     Stepper, Step, StepLabel, Chip, Fade, CircularProgress,
-    ToggleButtonGroup, ToggleButton, MenuItem, Select, FormControl, InputLabel,
+    ToggleButtonGroup, ToggleButton, MenuItem, Select, FormControl, InputLabel, Grid,
 } from '@mui/material';
+import AppTextField from '../components/form/AppTextField';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
@@ -23,7 +24,33 @@ const eventTypes: string[] = [];
 
 const employeeRanges = ['1-5', '6-20', '21-50', '50+'];
 
-function AdminOnboarding() {
+// Coppie nome+cognome casuali — modifica qui la lista a piacere
+const SAMPLE_PEOPLE = [
+    { name: 'Lara', surname: 'Ghirardi' },
+    { name: 'Mirea', surname: 'Elia' },
+    { name: 'Matteo', surname: 'Cafà' },
+    { name: 'Giovanni', surname: 'Parisi' },
+    { name: 'Marco', surname: 'Elefanti' },
+    { name: 'Giulia', surname: 'Tessaro' },
+    { name: 'Samuele', surname: 'Risalvato' },
+    { name: 'Sofia', surname: 'Castelli' },
+    { name: 'Brenda', surname: 'Palazzo' },
+    { name: 'Moreno', surname: 'Gallazzi' },
+    { name: 'Mattia', surname: 'Maciariello' },
+    { name: 'Alice', surname: 'Bubbo' },
+    { name: 'Anwar', surname: 'Giani' },
+    { name: 'Simone', surname: 'Marocco' },
+    { name: 'Matteo', surname: 'Caprì' },
+    { name: 'Davide', surname: 'Cislaghi' },
+    { name: 'Chiara', surname: 'D Alio' }
+];
+const pickPerson = () => SAMPLE_PEOPLE[Math.floor(Math.random() * SAMPLE_PEOPLE.length)];
+
+interface AdminOnboardingProps {
+    embedded?: boolean;
+}
+
+function AdminOnboarding({ embedded = false }: AdminOnboardingProps = {}) {
     const navigate = useNavigate();
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -31,6 +58,9 @@ function AdminOnboarding() {
 
     // Data
     const [nickname, setNickname] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [samplePerson] = useState(pickPerson);
     const [isCompany, setIsCompany] = useState(true);
 
     // Company
@@ -47,13 +77,13 @@ function AdminOnboarding() {
     const [employeeCount, setEmployeeCount] = useState('');
     const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
 
-    // Redirect on last step
+    // Redirect on last step — skip when embedded
     useEffect(() => {
-        if (activeStep === 5) {
+        if (activeStep === 5 && !embedded) {
             const timer = setTimeout(() => navigate('/dashboard'), 3000);
             return () => clearTimeout(timer);
         }
-    }, [activeStep, navigate]);
+    }, [activeStep, navigate, embedded]);
 
     const toggleEventType = (type: string) => {
         setSelectedEventTypes((prev) =>
@@ -67,6 +97,8 @@ function AdminOnboarding() {
         try {
             await api.patch('/api/user/admin-onboarding/', {
                 nickname: nickname || undefined,
+                first_name: firstName || undefined,
+                last_name: lastName || undefined,
                 is_company: isCompany,
                 company_name: companyName || undefined,
                 company_address: companyAddress || undefined,
@@ -109,13 +141,15 @@ function AdminOnboarding() {
     return (
         <Box
             sx={{
-                minHeight: '100vh',
+                minHeight: embedded ? 'auto' : '100vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: (t) =>
-                    `linear-gradient(135deg, ${t.palette.background.default} 0%, ${t.palette.primary.dark}22 50%, ${t.palette.background.default} 100%)`,
-                py: 4,
+                background: embedded
+                    ? 'transparent'
+                    : (t) =>
+                        `linear-gradient(135deg, ${t.palette.background.default} 0%, ${t.palette.primary.dark}22 50%, ${t.palette.background.default} 100%)`,
+                py: embedded ? 0 : 4,
             }}
         >
             <Container maxWidth="sm">
@@ -186,9 +220,21 @@ function AdminOnboarding() {
                                             Come vuoi essere chiamato?
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary" textAlign="center">
-                                            Scegli un nickname per il tuo profilo organizzatore
+                                            Scegli un nickname e inserisci il tuo nome (opzionale)
                                         </Typography>
-                                        <TextField fullWidth label="Nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} autoFocus sx={{ maxWidth: 400 }} />
+                                        <Box sx={{ width: '100%', maxWidth: 400 }}>
+                                            <Stack spacing={2}>
+                                                <AppTextField fullWidth label="Nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} autoFocus />
+                                                <Grid container spacing={2}>
+                                                    <Grid size={6}>
+                                                        <AppTextField fullWidth label="Nome" placeholder={samplePerson.name} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                                                    </Grid>
+                                                    <Grid size={6}>
+                                                        <AppTextField fullWidth label="Cognome" placeholder={samplePerson.surname} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                                                    </Grid>
+                                                </Grid>
+                                            </Stack>
+                                        </Box>
                                     </Stack>
                                 </Fade>
                             )}
@@ -257,8 +303,8 @@ function AdminOnboarding() {
                                         </Typography>
                                         {isCompany ? (
                                             <Stack spacing={2.5} sx={{ width: '100%', maxWidth: 400 }}>
-                                                <TextField fullWidth label="Ragione Sociale" value={companyName} onChange={(e) => setCompanyName(e.target.value)} autoFocus />
-                                                <TextField fullWidth label="Partita IVA" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
+                                                <AppTextField fullWidth label="Ragione Sociale" value={companyName} onChange={(e) => setCompanyName(e.target.value)} autoFocus />
+                                                <AppTextField fullWidth label="Partita IVA" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
                                                 <AddressAutocomplete
                                                     value={companyAddress}
                                                     onChange={setCompanyAddress}
@@ -268,9 +314,9 @@ function AdminOnboarding() {
                                             </Stack>
                                         ) : (
                                             <Stack spacing={2.5} sx={{ width: '100%', maxWidth: 400 }}>
-                                                <TextField fullWidth label="Nome" value={firstNameOrg} onChange={(e) => setFirstNameOrg(e.target.value)} autoFocus />
-                                                <TextField fullWidth label="Cognome" value={lastNameOrg} onChange={(e) => setLastNameOrg(e.target.value)} />
-                                                <TextField fullWidth label="Codice Fiscale" value={fiscalCode} onChange={(e) => setFiscalCode(e.target.value)} />
+                                                <AppTextField fullWidth label="Nome" value={firstNameOrg} onChange={(e) => setFirstNameOrg(e.target.value)} autoFocus />
+                                                <AppTextField fullWidth label="Cognome" value={lastNameOrg} onChange={(e) => setLastNameOrg(e.target.value)} />
+                                                <AppTextField fullWidth label="Codice Fiscale" value={fiscalCode} onChange={(e) => setFiscalCode(e.target.value)} />
                                             </Stack>
                                         )}
                                     </Stack>
@@ -367,15 +413,37 @@ function AdminOnboarding() {
                                             <CelebrationIcon sx={{ fontSize: 50, color: 'white' }} />
                                         </Box>
                                         <Typography variant="h5" fontWeight="bold" textAlign="center">
-                                            Grazie, {nickname || 'organizzatore'}! 🎉
+                                            Benvenuto{firstName ? `, ${firstName}` : nickname ? `, ${nickname}` : ' organizzatore'}! 🎉
                                         </Typography>
                                         <Typography variant="body1" color="text.secondary" textAlign="center">
                                             Il tuo profilo organizzatore è stato configurato con successo.
                                         </Typography>
-                                        <Typography variant="body2" color="text.disabled" textAlign="center">
-                                            Verrai reindirizzato alla dashboard tra pochi secondi...
-                                        </Typography>
-                                        <CircularProgress size={24} sx={{ mt: 1 }} />
+                                        {embedded ? (
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    setActiveStep(0);
+                                                    setNickname('');
+                                                    setFirstName('');
+                                                    setLastName('');
+                                                    setIsCompany(true);
+                                                    setCompanyName(''); setCompanyAddress(''); setVatNumber('');
+                                                    setFirstNameOrg(''); setLastNameOrg(''); setFiscalCode('');
+                                                    setEmployeeCount('');
+                                                    setSelectedEventTypes([]);
+                                                }}
+                                                sx={{ mt: 1, textTransform: 'none', borderRadius: 2 }}
+                                            >
+                                                Ricomincia
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Typography variant="body2" color="text.disabled" textAlign="center">
+                                                    Verrai reindirizzato alla dashboard tra pochi secondi...
+                                                </Typography>
+                                                <CircularProgress size={24} sx={{ mt: 1 }} />
+                                            </>
+                                        )}
                                     </Stack>
                                 </Fade>
                             )}

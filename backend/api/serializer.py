@@ -188,13 +188,15 @@ class OnboardingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['nickname', 'location', 'music_preferences', 'onboarding_completed']
+        fields = ['nickname', 'first_name', 'last_name', 'location', 'music_preferences', 'onboarding_completed']
         read_only_fields = ['onboarding_completed']
 
     def update(self, instance, validated_data):
         nickname = validated_data.pop('nickname', None)
         if nickname:
             instance.username = nickname
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.location = validated_data.get('location', instance.location)
         instance.music_preferences = validated_data.get('music_preferences', instance.music_preferences)
         instance.onboarding_completed = True
@@ -204,6 +206,8 @@ class OnboardingSerializer(serializers.ModelSerializer):
 
 class AdminOnboardingSerializer(serializers.Serializer):
     nickname = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
     is_company = serializers.BooleanField(required=False, default=True)
 
     # Company fields
@@ -221,11 +225,17 @@ class AdminOnboardingSerializer(serializers.Serializer):
     event_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
     def update(self, instance, validated_data):
-        # Update user nickname
+        # Update user fields
         nickname = validated_data.pop('nickname', None)
         if nickname:
             instance.username = nickname
-            instance.save()
+        first_name = validated_data.pop('first_name', None)
+        if first_name is not None:
+            instance.first_name = first_name
+        last_name = validated_data.pop('last_name', None)
+        if last_name is not None:
+            instance.last_name = last_name
+        instance.save()
 
         # Update organizer profile
         profile, _ = OrganizerProfile.objects.get_or_create(user=instance)
