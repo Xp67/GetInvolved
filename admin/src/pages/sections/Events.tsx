@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
     Typography, Button, Box, Grid, Paper, Divider, Tabs, Tab,
-    Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Stack, TextField, Snackbar, Alert
+    Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Stack, TextField
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import Event from "../../components/Event";
@@ -31,7 +31,7 @@ export default function EventsSection({
     const [eventDate, setEventDate] = useState("");
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
+
 
     const handleOpen = () => {
         setTitle("");
@@ -216,9 +216,6 @@ export default function EventsSection({
                 </DialogActions>
             </Dialog>
 
-            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-                <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>Evento modificato con successo!</Alert>
-            </Snackbar>
         </Box>
     );
 }

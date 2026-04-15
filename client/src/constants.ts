@@ -1,2 +1,1 @@
-export const ACCESS_TOKEN = "access";
-export const REFRESH_TOKEN = "refresh";
+export { ACCESS_TOKEN_KEY as ACCESS_TOKEN, REFRESH_TOKEN_KEY as REFRESH_TOKEN } from "@shared/authTokens";

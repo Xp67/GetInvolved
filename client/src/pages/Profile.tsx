@@ -1,29 +1,31 @@
-import { useState, useEffect } from 'react';
 import api from '../api';
 import {
-    Box, Drawer, IconButton, Snackbar, Alert, CircularProgress, useTheme, useMediaQuery
+    Box, Drawer, IconButton, Snackbar, Alert, CircularProgress, useTheme, useMediaQuery,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AppSidebar from '../components/Sidebar';
 import { ProfileConfig } from './sections/config/ProfileConfig';
+import { useProfilePage } from '@shared/hooks/useProfilePage';
+
+const INITIAL_PROFILE = {
+    username: '', email: '', first_name: '', last_name: '', phone_number: '', bio: '',
+    avatar: null as string | null, affiliate_code: '', affiliated_to_username: null as string | null,
+    affiliation_date: null as string | null, all_permissions: [] as string[],
+};
 
 function Profile() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [profile, setProfile] = useState({
-        username: '', email: '', first_name: '', last_name: '', phone_number: '', bio: '',
-        avatar: null as string | null, affiliate_code: '', affiliated_to_username: null as string | null, affiliation_date: null as string | null,
-        all_permissions: [] as string[],
-    });
-    const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState({ type: 'success' as 'success' | 'error', text: '' });
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [activeSection, setActiveSection] = useState('personal_info');
 
-    useEffect(() => { getProfile(); }, []);
-
-    const getProfile = () => {
+    const {
+        profile, setProfile, loading,
+        drawerOpen, setDrawerOpen,
+        activeSection, setActiveSection,
+        message, setMessage,
+        openSnackbar, setOpenSnackbar,
+        handleSidebarChange,
+        filterDevSection,
+    } = useProfilePage(INITIAL_PROFILE, (setProfile, setLoading) => {
         api.get('/api/user/profile/').then(res => {
             const d = res.data;
             setProfile({
@@ -35,32 +37,27 @@ function Profile() {
             });
             setLoading(false);
         }).catch(() => setLoading(false));
-    };
-
-
-
-    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><CircularProgress /></Box>;
-
-    const filteredConfig = ProfileConfig.map(s => {
-        if (s.id === 'dev_onboarding') {
-            return { ...s, show: profile.all_permissions.includes('developer.view') };
-        }
-        return s;
     });
 
-    const ActiveSectionData = filteredConfig.find(s => s.id === activeSection);
-    const ActiveComponent = ActiveSectionData?.component;
+    if (loading) return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+            <CircularProgress />
+        </Box>
+    );
+
+    const filteredConfig = filterDevSection(ProfileConfig);
+    const ActiveComponent = filteredConfig.find(s => s.id === activeSection)?.component;
 
     return (
         <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 64px)', bgcolor: 'background.default', position: 'relative' }}>
             {isMobile && (
                 <IconButton onClick={() => setDrawerOpen(true)}
-                    sx={{ position: 'fixed', top: 76, left: 16, bgcolor: 'primary.main', color: 'primary.contrastText', boxShadow: 3, zIndex: 1000, '&:hover': { bgcolor: 'primary.dark' } }}>
+                    sx={{ position: 'fixed', top: 76, left: 16, bgcolor: 'primary.main', color: 'primary.contrastText', boxShadow: 3, zIndex: 1000, '&:hover': { bgcolor: 'primary.dark' }, width: 40, height: 40 }}>
                     <MenuIcon fontSize="small" />
                 </IconButton>
             )}
             <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} sx={{ '& .MuiDrawer-paper': { width: 300 } }}>
-                <AppSidebar title="Il Mio Profilo" items={filteredConfig} activeItem={activeSection} onItemChange={(id: string) => { setActiveSection(id); setDrawerOpen(false); }} />
+                <AppSidebar title="Il Mio Profilo" items={filteredConfig} activeItem={activeSection} onItemChange={handleSidebarChange} />
             </Drawer>
             <Box sx={{
                 width: 300, minWidth: 300, flexShrink: 0, bgcolor: 'background.paper', borderRight: '1px solid', borderColor: 'divider',
@@ -76,6 +73,8 @@ function Profile() {
                             setProfile={setProfile}
                             setMessage={setMessage}
                             setOpenSnackbar={setOpenSnackbar}
+                            isMobile={isMobile}
+                            showInviteLink={true}
                         />
                     )}
                 </Box>

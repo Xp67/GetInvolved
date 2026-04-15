@@ -17,7 +17,7 @@ if not inviter:
 print(f"Inviter: {inviter.username}, Code: {inviter.affiliate_code}")
 
 # Register a new user just like the API does
-from api.serializer import RegisterSerializer
+from api.serializers import RegisterSerializer
 
 random_email = f"test_{uuid.uuid4().hex[:6]}@example.com"
 data = {

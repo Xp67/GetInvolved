@@ -14,4 +14,4 @@ pillow
 google-cloud-secret-manager 
 qrcode
 reportlab
-django-apache-scheduler
+django-apscheduler

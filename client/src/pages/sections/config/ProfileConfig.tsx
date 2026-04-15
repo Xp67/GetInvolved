@@ -1,36 +1,13 @@
-import PersonIcon from '@mui/icons-material/Person';
-import PeopleIcon from '@mui/icons-material/People';
-import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
-import BuildIcon from '@mui/icons-material/Build';
+import { buildProfileConfig } from "@shared/profileSections";
 
-import PersonalInfo from '../PersonalInfo';
-import Affiliations from '../Affiliations';
-import MyTickets from '../MyTickets';
-import DevOnboarding from '../DevOnboarding';
+import PersonalInfo from "../PersonalInfo";
+import Affiliations from "../Affiliations";
+import MyTickets from "../MyTickets";
+import DevOnboarding from "../DevOnboarding";
 
-export const ProfileConfig = [
-    {
-        id: 'personal_info',
-        label: 'Informazioni Personali',
-        icon: <PersonIcon />,
-        component: PersonalInfo
-    },
-    {
-        id: 'affiliated_users',
-        label: 'Affiliazioni',
-        icon: <PeopleIcon />,
-        component: Affiliations
-    },
-    {
-        id: 'my_tickets',
-        label: 'I Miei Biglietti',
-        icon: <ConfirmationNumberIcon />,
-        component: MyTickets
-    },
-    {
-        id: 'dev_onboarding',
-        label: 'Dev: Onboarding',
-        icon: <BuildIcon />,
-        component: DevOnboarding
-    }
-];
+export const ProfileConfig = buildProfileConfig("client", {
+    PersonalInfo,
+    Affiliations,
+    MyTickets,
+    DevOnboarding,
+});

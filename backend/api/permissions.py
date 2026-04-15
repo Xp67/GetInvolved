@@ -2,6 +2,16 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from .permission_registry import Perms
 
 
+def can_manage_event_tickets(user, event):
+    """True if user is super admin, event organizer, or has TICKETS_MANAGE permission."""
+    return user.is_super_admin or event.organizer == user or user.has_app_permission(Perms.TICKETS_MANAGE)
+
+
+def can_access_ticket(user, ticket):
+    """True if user owns the ticket, is the event organizer, or is super admin."""
+    return user.is_super_admin or ticket.owner == user or ticket.category.event.organizer == user
+
+
 class HasAppPermission(BasePermission):
     """
     Generic permission class that checks for a specific codename.

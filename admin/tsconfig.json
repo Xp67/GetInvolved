@@ -9,11 +9,16 @@
     "skipLibCheck": true,
     "allowJs": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../shared/src/*"]
+    }
   },
   "include": [
     "src",
     "contexts",
-    "costumizations"
+    "costumizations",
+    "../shared/src"
   ]
 }
